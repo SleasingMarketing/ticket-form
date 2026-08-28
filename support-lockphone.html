@@ -319,7 +319,7 @@ function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = nul
 // หยุด poll ตอนสลับแท็บ ประหยัดโควตา
 document.addEventListener('visibilitychange', () => {
   if(document.hidden) stopPolling();
-  else if(sessionStorage.getItem('adminUnlocked') === '1'){ load(); startPolling(); }
+  else if(document.getElementById('gate').classList.contains('hidden')){ load(); startPolling(); }
 });
 
 document.getElementById('refreshBtn').addEventListener('click', load);
@@ -327,7 +327,6 @@ document.getElementById('refreshBtn').addEventListener('click', load);
 // ===== PIN gate =====
 function unlock(){
   document.getElementById('gate').classList.add('hidden');
-  sessionStorage.setItem('adminUnlocked', '1');
   load();
   startPolling();
 }
@@ -350,12 +349,8 @@ document.getElementById('pinInput').addEventListener('keydown', e => {
   if(e.key === 'Enter') tryPin();
 });
 
-// ปลดล็อกไว้แล้วใน session นี้ -> ข้าม PIN
-if(sessionStorage.getItem('adminUnlocked') === '1'){
-  unlock();
-} else {
-  document.getElementById('pinInput').focus();
-}
+// แสดงหน้า PIN ทุกครั้งที่เปิด/refresh
+document.getElementById('pinInput').focus();
 </script>
 </body>
 </html>
