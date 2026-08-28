@@ -206,8 +206,10 @@ function renderPosition_(data){
     el.textContent = '';
   } else if(data.status === 'เสร็จแล้ว'){
     el.textContent = '(ดำเนินการเสร็จแล้ว)';
+  } else if(data.ahead === 0){
+    el.textContent = '(ถึงคิวคุณแล้ว)';
   } else {
-    el.textContent = `(คิวที่ ${data.ahead + 1} ที่รอดำเนินการ)`;
+    el.textContent = `(รออีก ${data.ahead} คิว)`;
   }
 }
 
