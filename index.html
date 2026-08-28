@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ลงทะเบียน Ticket - ระบบคิว</title>
-<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root{
     --bg:#F5F6F8;
@@ -113,7 +112,7 @@
 
   <div id="formView">
     <div class="card">
-      <h1>แบบฟอร์มลงทะเบียนรับคิวปลดล็อค</h1>
+      <h1>แบบฟอร์มลงทะเบียนแจ้งรับคิวปลดล็อค</h1>
       <p class="desc">กรุณากรอกข้อมูลให้ครบถ้วน เจ้าหน้าที่จะติดต่อกลับตามลำดับคิวที่ลงทะเบียน</p>
 
       <label for="fullname">ชื่อ - นามสกุล</label>
@@ -184,24 +183,7 @@
 <script>
 // ===== ตั้งค่าตรงนี้ =====
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgobwjjz751jjq9KGNExNlD7TqE5SZqM0mqOSaG0JUs1OkBHs7rXv9WldV_2OwKYmi/exec"; // ลิงก์จาก Deploy > Web app
-const LIFF_ID = "YOUR_LIFF_ID"; // จาก LINE Developers Console เช่น "1234567890-AbcdEfgh"
 // =========================
-
-// เริ่มต้น LIFF (ถ้าเปิดผ่าน LIFF app จะปิดหน้าต่างกลับแชทได้)
-// ถ้าเปิดผ่านเว็บธรรมดา จะข้ามไป ฟอร์มยังใช้งานได้ปกติ
-let liffReady = false;
-if(window.liff && LIFF_ID !== "YOUR_LIFF_ID"){
-  liff.init({ liffId: LIFF_ID })
-    .then(() => { liffReady = true; })
-    .catch(err => console.warn('LIFF init failed:', err));
-}
-
-// ปิดหน้าต่าง LIFF กลับไปที่แชท (เรียกได้เฉพาะตอนเปิดผ่าน LIFF)
-function closeLiffWindow(){
-  if(liffReady && liff.isInClient()){
-    liff.closeWindow();
-  }
-}
 
 function toggle(id, show){ document.getElementById(id).classList.toggle('hidden', !show); }
 
@@ -418,15 +400,10 @@ document.getElementById('copyBtn').addEventListener('click', async () => {
 
   btn.textContent = 'คัดลอกแล้ว ✓';
   btn.classList.add('copied');
-
-  // โชว์ feedback สักครู่ให้ลูกค้าเห็นว่าคัดลอกแล้ว จากนั้นปิดหน้าต่างกลับแชท
-  // (ถ้าเปิดผ่านเว็บธรรมดา closeLiffWindow จะไม่ทำอะไร ปุ่มจะ reset กลับตามปกติ)
   setTimeout(() => {
-    stopPolling_(); // หยุดเช็คคิวก่อนปิด
-    closeLiffWindow();
     btn.textContent = 'คัดลอกข้อมูลคิว';
     btn.classList.remove('copied');
-  }, 1200);
+  }, 2500);
 });
 
 // popup ลงทะเบียนซ้ำ
