@@ -21,163 +21,209 @@
   body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh;}
 
   header{
-    position:sticky;top:0;z-index:10;
-    background:var(--card);border-bottom:1px solid var(--line);
-    padding:14px 20px;display:flex;align-items:center;gap:14px;
+    position:sticky;top:0;z-index:10;background:var(--card);
+    border-bottom:1px solid var(--line);padding:14px 24px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
   }
-  header h1{font-size:17px;margin:0;font-weight:800;}
-  header .count{
+  .who{display:flex;align-items:center;gap:12px;}
+  .who .avatar{
+    width:46px;height:46px;border-radius:50%;background:var(--accent);
+    color:#fff;font-size:20px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  .who .label{font-size:11.5px;color:var(--ink-soft);}
+  .who .name{font-size:16px;font-weight:800;line-height:1.2;}
+  .count-pill{
     font-size:13px;color:var(--accent);font-weight:700;
-    background:#E7F1EE;padding:4px 11px;border-radius:20px;
+    background:#E7F1EE;padding:5px 13px;border-radius:20px;white-space:nowrap;
   }
-  header .live{
-    margin-left:auto;display:flex;align-items:center;gap:7px;
-    font-size:12.5px;color:var(--ink-soft);
-  }
-  header .dot{width:8px;height:8px;border-radius:50%;background:#33B679;animation:pulse 1.6s ease-in-out infinite;}
+  .header-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .live{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-soft);}
+  .live .dot{width:8px;height:8px;border-radius:50%;background:#33B679;animation:pulse 1.6s ease-in-out infinite;}
+  .live.off .dot{background:var(--danger);animation:none;}
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.8);}}
-  header button.refresh{
+  .search-box{position:relative;}
+  .search-box input{
+    border:1px solid var(--line);border-radius:9px;padding:8px 34px 8px 12px;
+    font-size:14px;font-family:inherit;background:#FBFBFC;width:200px;color:var(--ink);
+  }
+  .search-box input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .search-box .icon{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-size:15px;pointer-events:none;}
+  .filter-sel{
+    border:1px solid var(--line);border-radius:9px;padding:8px 12px;
+    font-size:14px;font-family:inherit;background:var(--card);color:var(--ink);cursor:pointer;
+  }
+  button.btn-refresh{
     border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
-    border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:600;
+    border-radius:9px;padding:8px 14px;font-size:13.5px;cursor:pointer;font-weight:700;font-family:inherit;
   }
-  header button.refresh:active{transform:scale(.96);}
-
-  .grid{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-    gap:18px;padding:20px;max-width:1600px;margin:0 auto;
-  }
-
-  .ticket{
-    background:var(--card);border-radius:16px;overflow:hidden;
-    box-shadow:0 2px 10px rgba(26,35,51,.06);
-    display:flex;flex-direction:column;
-    animation:cardIn .45s cubic-bezier(.2,.8,.2,1) both;
-    transition:opacity .4s ease, transform .4s ease;
-  }
-  .ticket.leaving{opacity:0;transform:scale(.9) translateY(-8px);}
-  @keyframes cardIn{
-    from{opacity:0;transform:translateY(14px) scale(.97);}
-    to{opacity:1;transform:none;}
+  button.btn-refresh:active{transform:scale(.96);}
+  button.btn-logout{
+    border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
+    border-radius:9px;padding:8px 12px;font-size:13.5px;cursor:pointer;font-family:inherit;
   }
 
-  .ticket .head{
-    background:var(--accent);color:#fff;padding:14px 16px 16px;text-align:center;
-    transition:background .3s ease;
-  }
-  .ticket.doing .head{background:var(--accent-deep);}
-  .ticket .head .label{font-size:12px;opacity:.8;letter-spacing:.04em;}
-  .ticket .head .code{font-size:30px;font-weight:800;margin-top:2px;letter-spacing:.02em;}
-  .ticket .head .badge{
-    display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;
-    background:rgba(255,255,255,.18);padding:3px 12px;border-radius:20px;
-    min-height:20px;
-  }
+  .subbar{padding:16px 24px 4px;display:flex;align-items:center;gap:12px;}
+  .subbar h2{font-size:16px;margin:0;font-weight:800;}
 
-  .ticket .body{padding:16px 16px 6px;text-align:center;}
-  .ticket .body .name{font-size:17px;font-weight:700;margin-bottom:12px;}
-  .ticket .body .row{
-    display:flex;justify-content:space-between;gap:10px;
-    padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;
-  }
-  .ticket .body .row .k{color:var(--ink-soft);}
-  .ticket .body .row .v{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
+  .list{padding:14px 24px 40px;display:flex;flex-direction:column;gap:14px;max-width:1500px;}
 
-  .ticket .actions{display:flex;gap:8px;padding:14px 16px 16px;}
-  .ticket .actions button{
-    flex:1;border-radius:9px;padding:10px 6px;font-size:13.5px;font-weight:700;
+  .row{
+    display:flex;align-items:stretch;background:var(--card);border-radius:14px;
+    overflow:hidden;box-shadow:0 2px 8px rgba(26,35,51,.05);
+    animation:rowIn .4s cubic-bezier(.2,.8,.2,1) both;
+    transition:opacity .38s ease, transform .38s ease;
+  }
+  .row.leaving{opacity:0;transform:translateX(24px);}
+  @keyframes rowIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+  .row .qhead{
+    background:var(--accent);color:#fff;padding:16px 20px;min-width:220px;
+    display:flex;align-items:center;gap:16px;transition:background .3s ease;
+  }
+  .row.doing .qhead{background:var(--accent-deep);}
+  .row .qhead .avatar{
+    width:58px;height:58px;border-radius:50%;flex-shrink:0;
+    border:2px solid rgba(255,255,255,.5);overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.12);
+  }
+  .row .qhead .avatar img{width:100%;height:100%;object-fit:cover;}
+  .row .qhead .qmeta .qlabel{font-size:11.5px;opacity:.82;}
+  .row .qhead .qmeta .qcode{font-size:26px;font-weight:800;letter-spacing:.02em;line-height:1.15;}
+
+  .row .fields{
+    flex:1;display:flex;align-items:center;gap:8px;padding:0 8px;
+    min-width:0;overflow-x:auto;
+  }
+  .row .field{padding:14px 20px;border-left:1px solid var(--line);min-width:150px;}
+  .row .field:first-child{border-left:none;}
+  .row .field .k{font-size:11.5px;color:var(--ink-soft);margin-bottom:3px;}
+  .row .field .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .row .field .v.name-v{font-size:17px;}
+
+  .row .actions{display:flex;align-items:center;gap:10px;padding:14px 20px;flex-shrink:0;}
+  .row .actions button{
+    border-radius:9px;padding:11px 18px;font-size:14px;font-weight:700;
     cursor:pointer;border:1.5px solid transparent;transition:all .18s ease;
-    font-family:inherit;
+    font-family:inherit;white-space:nowrap;
   }
-  .ticket .actions button:active{transform:scale(.95);}
+  .row .actions button:active{transform:scale(.95);}
   .btn-doing{background:var(--accent);color:#fff;border-color:var(--accent);}
-  /* เมื่อคิวนี้อยู่สถานะกำลังดำเนินการ ปุ่มจะกลายเป็นขาวขอบเขียว */
-  .ticket.doing .btn-doing{background:#fff;color:var(--accent);border-color:var(--accent);}
+  .row.doing .btn-doing{background:#fff;color:var(--accent);border-color:var(--accent);}
   .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
   .btn-done:hover{background:var(--danger-deep);}
+  .row.doing .btn-done{background:var(--danger);color:#fff;}
+  .row:not(.doing) .btn-done{background:#fff;color:var(--ink-soft);border-color:var(--line);}
+  .row:not(.doing) .btn-done:hover{background:var(--danger);color:#fff;border-color:var(--danger);}
 
   .empty{
-    grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--ink-soft);
+    text-align:center;padding:80px 20px;color:var(--ink-soft);
+    background:var(--card);border-radius:14px;
   }
-  .empty .big{font-size:20px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .empty .big{font-size:19px;font-weight:700;color:var(--ink);margin-bottom:8px;}
 
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--ink);color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;
-    opacity:0;pointer-events:none;transition:all .3s ease;z-index:20;
+    opacity:0;pointer-events:none;transition:all .3s ease;z-index:30;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  @media (prefers-reduced-motion:reduce){
-    *{animation:none!important;transition:none!important;}
-  }
-
-  /* หน้าใส่ PIN */
-  .gate{
-    position:fixed;inset:0;background:var(--bg);z-index:100;
-    display:flex;align-items:center;justify-content:center;padding:24px;
-  }
+  .gate{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;}
   .gate.hidden{display:none;}
   .gate-card{
-    background:var(--card);border-radius:16px;padding:32px 28px;max-width:340px;width:100%;
+    background:var(--card);border-radius:16px;padding:34px 30px;max-width:360px;width:100%;
     text-align:center;box-shadow:0 8px 30px rgba(26,35,51,.12);
   }
-  .gate-card .lock{
-    width:52px;height:52px;border-radius:50%;background:#E7F1EE;color:var(--accent);
-    font-size:26px;line-height:52px;margin:0 auto 16px;
+  .gate-card .brand{
+    width:56px;height:56px;border-radius:16px;background:var(--accent);color:#fff;
+    font-size:24px;font-weight:800;line-height:56px;margin:0 auto 18px;
   }
-  .gate-card h2{font-size:18px;margin:0 0 6px;}
-  .gate-card p{font-size:13px;color:var(--ink-soft);margin:0 0 20px;}
+  .gate-card h2{font-size:19px;margin:0 0 6px;}
+  .gate-card p{font-size:13px;color:var(--ink-soft);margin:0 0 22px;}
   .gate-card input{
-    width:100%;padding:13px;border:1px solid var(--line);border-radius:10px;
-    font-size:20px;text-align:center;letter-spacing:.3em;font-family:inherit;
-    background:#FBFBFC;color:var(--ink);
+    width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:10px;
+    font-size:16px;text-align:center;font-family:inherit;background:#FBFBFC;color:var(--ink);
   }
   .gate-card input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
   .gate-card button{
     width:100%;margin-top:14px;padding:13px;border:none;border-radius:10px;
     background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;
   }
+  .gate-card button:disabled{opacity:.6;cursor:default;}
   .gate-card .err{color:var(--danger);font-size:13px;margin-top:12px;min-height:18px;}
+
+  @media (max-width:720px){
+    .row{flex-direction:column;}
+    .row .qhead{min-width:0;}
+    .row .fields{flex-wrap:wrap;}
+    .row .field{border-left:none;border-top:1px solid var(--line);width:100%;}
+    .row .actions{border-top:1px solid var(--line);justify-content:stretch;}
+    .row .actions button{flex:1;}
+    .search-box input{width:140px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 </style>
 </head>
 <body>
 
 <div class="gate" id="gate">
   <div class="gate-card">
-    <div class="lock">🔒</div>
-    <h2>จัดการคิวลูกค้า</h2>
-    <p>กรุณาใส่รหัสเพื่อเข้าใช้งาน</p>
-    <input type="tel" id="pinInput" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off">
-    <button id="pinBtn">เข้าสู่ระบบ</button>
-    <div class="err" id="pinErr"></div>
+    <div class="brand">S</div>
+    <h2>เข้าสู่ระบบจัดการคิว</h2>
+    <p>กรุณาใส่ชื่อผู้ใช้ที่ได้รับมอบหมาย</p>
+    <input type="text" id="userInput" placeholder="ชื่อผู้ใช้" autocomplete="off" autocapitalize="off">
+    <button id="loginBtn">เข้าสู่ระบบ</button>
+    <div class="err" id="loginErr"></div>
   </div>
 </div>
 
 <header>
-  <h1>จัดการคิวลูกค้า</h1>
-  <span class="count" id="count">0 คิว</span>
-  <div class="live">
-    <span class="dot"></span><span id="liveLabel">อัปเดตอัตโนมัติ</span>
-    <button class="refresh" id="refreshBtn">รีเฟรช</button>
+  <div class="who">
+    <div class="avatar" id="meAvatar">–</div>
+    <div>
+      <div class="label">ชื่อบัญชี</div>
+      <div class="name" id="meName">—</div>
+    </div>
+  </div>
+  <span class="count-pill" id="countPill">0 คิว</span>
+  <div class="header-right">
+    <div class="live" id="live"><span class="dot"></span><span id="liveLabel">อัปเดตอัตโนมัติ</span></div>
+    <select class="filter-sel" id="filterSel">
+      <option value="all">ทั้งหมด</option>
+      <option value="รอคิว">รอคิว</option>
+      <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+    </select>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="ค้นหา ชื่อ/คิว/บัตร">
+      <span class="icon">🔍</span>
+    </div>
+    <button class="btn-refresh" id="refreshBtn">รีเฟรช</button>
+    <button class="btn-logout" id="logoutBtn">ออก</button>
   </div>
 </header>
 
-<div class="grid" id="grid"></div>
+<div class="subbar">
+  <h2 id="subCount">จำนวน Ticket ปัจจุบัน 0 รายการ</h2>
+</div>
+
+<div class="list" id="list"></div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 // ===== ตั้งค่าตรงนี้ =====
 // URL ของ backend แอดมิน (Code-admin.gs) — คนละตัวกับ ticket-form ของลูกค้า
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvjmsN19ZHE5qoKOnOfa_2PyusdU9tmYJFX4oiDnj7a1WX3gZ6_wiy55lmTXM70yrB/exec";
-const ADMIN_PIN = "082026"; // รหัสเข้าหน้าจัดการคิว
+const APPS_SCRIPT_URL = "YOUR_ADMIN_APPS_SCRIPT_WEB_APP_URL";
 // =========================
 
 const API_URL = APPS_SCRIPT_URL;
 const POLL_MS = 5000;
 
-let tickets = [];      // สถานะปัจจุบันที่แสดงอยู่
-let busy = new Set();  // คิวที่กำลังส่งอัปเดต กันกดซ้ำ
+let tickets = [];
+let me = null;
+let busy = new Set();
 let pollTimer = null;
 
 function api(params){
@@ -193,103 +239,123 @@ function showToast(msg){
   t._timer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-// วาดการ์ดใหม่ทั้งหมด (ใช้ diff เพื่อไม่ให้กระพริบ)
-function render(){
-  const grid = document.getElementById('grid');
-  document.getElementById('count').textContent = `${tickets.length} คิว`;
-
-  if(tickets.length === 0){
-    grid.innerHTML = '<div class="empty"><div class="big">ไม่มีคิวที่รอดำเนินการ</div>คิวใหม่จะปรากฏที่นี่อัตโนมัติ</div>';
-    return;
-  }
-
-  // ลบ empty state ถ้ามี
-  const emptyEl = grid.querySelector('.empty');
-  if(emptyEl) emptyEl.remove();
-
-  const existingCodes = new Set([...grid.children].map(c => c.dataset.code));
-  const newCodes = new Set(tickets.map(t => t.ticketCode));
-
-  // ลบการ์ดที่ไม่อยู่ในลิสต์แล้ว (ด้วย transition)
-  [...grid.children].forEach(card => {
-    if(!newCodes.has(card.dataset.code)){
-      card.classList.add('leaving');
-      setTimeout(() => card.remove(), 400);
-    }
-  });
-
-  // เพิ่ม/อัปเดตการ์ดตามลำดับ
-  tickets.forEach((t, idx) => {
-    let card = grid.querySelector(`[data-code="${t.ticketCode}"]`);
-    if(!card){
-      card = buildCard(t);
-      // แทรกตามตำแหน่ง
-      const ref = grid.children[idx];
-      if(ref) grid.insertBefore(card, ref);
-      else grid.appendChild(card);
-    } else {
-      updateCard(card, t);
-    }
-  });
-}
-
-function buildCard(t){
-  const card = document.createElement('div');
-  card.className = 'ticket' + (t.status === 'กำลังดำเนินการ' ? ' doing' : '');
-  card.dataset.code = t.ticketCode;
-  card.innerHTML = `
-    <div class="head">
-      <div class="label">คิวลูกค้า</div>
-      <div class="code">${t.ticketCode}</div>
-      <div class="badge">${t.status === 'กำลังดำเนินการ' ? 'กำลังดำเนินการ' : 'รอคิว'}</div>
-    </div>
-    <div class="body">
-      <div class="name">${escapeHtml(t.fullname)}</div>
-      <div class="row"><span class="k">เลขบัตรประชาชน</span><span class="v">${escapeHtml(t.idcard)}</span></div>
-      ${t.contractno ? `<div class="row"><span class="k">เลขที่สัญญา</span><span class="v">${escapeHtml(t.contractno)}</span></div>` : ''}
-    </div>
-    <div class="actions">
-      <button class="btn-doing">ดำเนินการอยู่</button>
-      <button class="btn-done">ดำเนินการแล้ว</button>
-    </div>`;
-  card.querySelector('.btn-doing').addEventListener('click', () => setStatus(t.ticketCode, 'กำลังดำเนินการ'));
-  card.querySelector('.btn-done').addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
-  return card;
-}
-
-// อัปเดตการ์ดที่มีอยู่แล้ว โดยไม่สร้างใหม่ (กันกระพริบ)
-function updateCard(card, t){
-  const isDoing = t.status === 'กำลังดำเนินการ';
-  card.classList.toggle('doing', isDoing);
-  const badge = card.querySelector('.badge');
-  if(badge) badge.textContent = isDoing ? 'กำลังดำเนินการ' : 'รอคิว';
-}
-
 function escapeHtml(s){
   return String(s || '').replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[c]));
 }
 
+function setLive(on, label){
+  const el = document.getElementById('live');
+  el.classList.toggle('off', !on);
+  document.getElementById('liveLabel').textContent = label || (on ? 'อัปเดตอัตโนมัติ' : 'เชื่อมต่อไม่ได้');
+}
+
+function visibleTickets(){
+  const f = document.getElementById('filterSel').value;
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  return tickets.filter(t => {
+    if(f !== 'all' && t.status !== f) return false;
+    if(q){
+      const hay = `${t.ticketCode} ${t.fullname} ${t.idcard} ${t.contractno}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function render(){
+  const list = document.getElementById('list');
+  const items = visibleTickets();
+
+  document.getElementById('countPill').textContent = `${tickets.length} คิว`;
+  document.getElementById('subCount').textContent = `จำนวน Ticket ปัจจุบัน ${items.length} รายการ`;
+
+  if(items.length === 0){
+    [...list.querySelectorAll('.row')].forEach(c => c.remove());
+    if(!list.querySelector('.empty')){
+      list.innerHTML = '<div class="empty"><div class="big">ไม่มีคิวที่ตรงเงื่อนไข</div>คิวใหม่จะปรากฏที่นี่อัตโนมัติ</div>';
+    }
+    return;
+  }
+  const emptyEl = list.querySelector('.empty');
+  if(emptyEl) emptyEl.remove();
+
+  const visibleCodes = new Set(items.map(t => t.ticketCode));
+
+  [...list.querySelectorAll('.row')].forEach(rowEl => {
+    if(!visibleCodes.has(rowEl.dataset.code)){
+      rowEl.classList.add('leaving');
+      setTimeout(() => rowEl.remove(), 380);
+    }
+  });
+
+  items.forEach((t, idx) => {
+    let rowEl = list.querySelector(`.row[data-code="${cssEscape(t.ticketCode)}"]`);
+    if(!rowEl){
+      rowEl = buildRow(t);
+      const ref = list.querySelectorAll('.row')[idx];
+      if(ref) list.insertBefore(rowEl, ref);
+      else list.appendChild(rowEl);
+    } else {
+      updateRow(rowEl, t);
+    }
+  });
+}
+
+function cssEscape(s){ return String(s).replace(/"/g, '\\"'); }
+
+function buildRow(t){
+  const row = document.createElement('div');
+  row.className = 'row' + (t.status === 'กำลังดำเนินการ' ? ' doing' : '');
+  row.dataset.code = t.ticketCode;
+  const avatar = t.lockUrl
+    ? `<img src="${escapeHtml(t.lockUrl)}" alt="">`
+    : '<span style="font-size:22px;">👤</span>';
+  row.innerHTML = `
+    <div class="qhead">
+      <div class="avatar">${avatar}</div>
+      <div class="qmeta">
+        <div class="qlabel">รหัสคิวลูกค้า</div>
+        <div class="qcode">${escapeHtml(t.ticketCode)}</div>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field"><div class="k">ชื่อลงทะเบียน</div><div class="v name-v">${escapeHtml(t.fullname)}</div></div>
+      <div class="field"><div class="k">เลขบัตรประชาชน</div><div class="v">${escapeHtml(t.idcard)}</div></div>
+      ${t.contractno ? `<div class="field"><div class="k">เลขที่สัญญา</div><div class="v">${escapeHtml(t.contractno)}</div></div>` : ''}
+    </div>
+    <div class="actions">
+      <button class="btn-doing">${t.status === 'กำลังดำเนินการ' ? 'ดำเนินการอยู่' : 'ยังไม่ดำเนินการ'}</button>
+      <button class="btn-done">ดำเนินการแล้ว</button>
+    </div>`;
+  row.querySelector('.btn-doing').addEventListener('click', () => setStatus(t.ticketCode, 'กำลังดำเนินการ'));
+  row.querySelector('.btn-done').addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
+  return row;
+}
+
+function updateRow(row, t){
+  const isDoing = t.status === 'กำลังดำเนินการ';
+  row.classList.toggle('doing', isDoing);
+  const btn = row.querySelector('.btn-doing');
+  if(btn) btn.textContent = isDoing ? 'ดำเนินการอยู่' : 'ยังไม่ดำเนินการ';
+}
+
 async function setStatus(ticketCode, status){
   if(busy.has(ticketCode)) return;
   busy.add(ticketCode);
 
-  // ถ้าเป็น "เสร็จแล้ว" ให้เอาการ์ดออกจาก UI ทันที (optimistic) แล้วดึงลิสต์ใหม่
   if(status === 'เสร็จแล้ว'){
-    const card = document.querySelector(`[data-code="${ticketCode}"]`);
-    if(card){
-      card.classList.add('leaving');
-      setTimeout(() => card.remove(), 400);
-    }
+    const row = document.querySelector(`.row[data-code="${cssEscape(ticketCode)}"]`);
+    if(row){ row.classList.add('leaving'); setTimeout(() => row.remove(), 380); }
   }
 
   try{
     const res = await api({ action:'setStatus', ticketCode, status });
     if(!res.ok){ showToast(res.message || 'อัปเดตไม่สำเร็จ'); }
     else if(status === 'กำลังดำเนินการ'){ showToast(`${ticketCode} กำลังดำเนินการ`); }
-    else if(status === 'เสร็จแล้ว'){ showToast(`${ticketCode} เสร็จแล้ว`); }
-    await load(); // ดึงลิสต์ล่าสุด (คิวใหม่จะเลื่อนเข้ามาต่อท้าย)
+    else if(status === 'เสร็จแล้ว'){ showToast(`${ticketCode} เสร็จสิ้น`); }
+    await load();
   }catch(err){
     showToast('เชื่อมต่อไม่สำเร็จ');
     await load();
@@ -303,54 +369,79 @@ async function load(){
     const res = await api({ action:'list' });
     if(res.ok){
       tickets = res.tickets;
+      setLive(true);
       render();
     }
   }catch(err){
-    document.getElementById('liveLabel').textContent = 'เชื่อมต่อไม่ได้';
+    setLive(false);
   }
 }
 
-function startPolling(){
-  stopPolling();
-  pollTimer = setInterval(load, POLL_MS);
-}
+function startPolling(){ stopPolling(); pollTimer = setInterval(load, POLL_MS); }
 function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
 
-// หยุด poll ตอนสลับแท็บ ประหยัดโควตา
 document.addEventListener('visibilitychange', () => {
   if(document.hidden) stopPolling();
   else if(document.getElementById('gate').classList.contains('hidden')){ load(); startPolling(); }
 });
 
 document.getElementById('refreshBtn').addEventListener('click', load);
+document.getElementById('filterSel').addEventListener('change', render);
+document.getElementById('searchInput').addEventListener('input', render);
 
-// ===== PIN gate =====
-function unlock(){
+function applyMe(){
+  document.getElementById('meName').textContent = me.displayName;
+  const av = document.getElementById('meAvatar');
+  if(me.avatarUrl){
+    av.innerHTML = `<img src="${me.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.textContent='${(me.displayName||'?').trim().charAt(0)}'">`;
+  } else {
+    av.textContent = (me.displayName || '?').trim().charAt(0);
+  }
+}
+
+function enterApp(){
+  applyMe();
   document.getElementById('gate').classList.add('hidden');
   load();
   startPolling();
 }
 
-function tryPin(){
-  const val = document.getElementById('pinInput').value.trim();
-  const err = document.getElementById('pinErr');
-  if(val === ADMIN_PIN){
-    err.textContent = '';
-    unlock();
-  } else {
-    err.textContent = 'รหัสไม่ถูกต้อง';
-    document.getElementById('pinInput').value = '';
-    document.getElementById('pinInput').focus();
+async function tryLogin(){
+  const val = document.getElementById('userInput').value.trim();
+  const err = document.getElementById('loginErr');
+  const btn = document.getElementById('loginBtn');
+  if(!val){ err.textContent = 'กรุณาใส่ชื่อผู้ใช้'; return; }
+
+  btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
+  err.textContent = '';
+  try{
+    const res = await api({ action:'login', username: val });
+    if(res.ok){
+      me = { username: res.username, displayName: res.displayName, avatarUrl: res.avatarUrl || '' };
+      enterApp();
+    } else {
+      err.textContent = res.message || 'ไม่พบชื่อผู้ใช้นี้';
+    }
+  }catch(e){
+    err.textContent = 'เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง';
+  }finally{
+    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
   }
 }
 
-document.getElementById('pinBtn').addEventListener('click', tryPin);
-document.getElementById('pinInput').addEventListener('keydown', e => {
-  if(e.key === 'Enter') tryPin();
+document.getElementById('loginBtn').addEventListener('click', tryLogin);
+document.getElementById('userInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryLogin(); });
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  stopPolling();
+  me = null;
+  document.getElementById('userInput').value = '';
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('gate').classList.remove('hidden');
+  document.getElementById('userInput').focus();
 });
 
-// แสดงหน้า PIN ทุกครั้งที่เปิด/refresh
-document.getElementById('pinInput').focus();
+document.getElementById('userInput').focus();
 </script>
 </body>
 </html>
