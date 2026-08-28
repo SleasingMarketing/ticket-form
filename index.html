@@ -112,7 +112,7 @@
 
   <div id="formView">
     <div class="card">
-      <h1>แบบฟอร์มลงทะเบียนแจ้งรับคิวปลดล็อค</h1>
+      <h1>แบบฟอร์มลงทะเบียนรับคิวปลดล็อค</h1>
       <p class="desc">กรุณากรอกข้อมูลให้ครบถ้วน เจ้าหน้าที่จะติดต่อกลับตามลำดับคิวที่ลงทะเบียน</p>
 
       <label for="fullname">ชื่อ - นามสกุล</label>
@@ -121,7 +121,7 @@
 
       <label for="idcard">เลขบัตรประชาชน</label>
       <input type="tel" id="idcard" maxlength="13" placeholder="เลข 13 หลัก">
-      <div class="err" id="err-idcard">กรุณากรอกเลขบัตรประชาชนให้ถูกต้อง (13 หลัก)</div>
+      <div class="err" id="err-idcard">กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก</div>
 
       <label for="contractno">เลขที่สัญญา <span style="font-weight:400;color:var(--ink-soft)">(ถ้ามี)</span></label>
       <input type="tel" id="contractno" maxlength="15" placeholder="เลข 15 หลัก">
@@ -221,17 +221,6 @@ function bindUploadBox(boxId, inputId, opts){
 bindUploadBox('box-lock','file-lock', {maxW:720, quality:0.6});   // หน้าล็อก ย่อแรงกว่า ประหยัดพื้นที่
 bindUploadBox('box-slip','file-slip', {maxW:1000, quality:0.7});  // สลิป เก็บรายละเอียดยอดเงิน
 
-// ตรวจ checksum เลขบัตรประชาชนไทย (13 หลัก)
-function isValidThaiId(id){
-  if(!/^\d{13}$/.test(id)) return false;
-  let sum = 0;
-  for(let i = 0; i < 12; i++){
-    sum += parseInt(id.charAt(i), 10) * (13 - i);
-  }
-  const check = (11 - (sum % 11)) % 10;
-  return check === parseInt(id.charAt(12), 10);
-}
-
 function validate(){
   let ok = true;
   const fullname = document.getElementById('fullname').value.trim();
@@ -241,8 +230,7 @@ function validate(){
   const slipImg = document.getElementById('box-slip').dataset.image;
 
   toggle('err-fullname', !fullname); if(!fullname) ok = false;
-  const idBad = !isValidThaiId(idcard);
-  toggle('err-idcard', idBad); if(idBad) ok = false;
+  toggle('err-idcard', idcard.length !== 13); if(idcard.length !== 13) ok = false;
   toggle('err-contractno', contractno.length > 0 && contractno.length !== 15);
   if(contractno.length > 0 && contractno.length !== 15) ok = false;
   toggle('err-lock', !lockImg); if(!lockImg) ok = false;
