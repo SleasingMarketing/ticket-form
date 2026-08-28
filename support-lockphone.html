@@ -191,9 +191,12 @@
   <div class="header-right">
     <div class="live" id="live"><span class="dot"></span><span id="liveLabel">อัปเดตอัตโนมัติ</span></div>
     <select class="filter-sel" id="filterSel">
-      <option value="all">ทั้งหมด</option>
-      <option value="รอคิว">รอคิว</option>
-      <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+      <option value="all">สถานะทั้งหมด</option>
+      <option value="รอคิว">ยังไม่ดำเนินการ</option>
+      <option value="กำลังดำเนินการ">ดำเนินการอยู่</option>
+    </select>
+    <select class="filter-sel" id="ownerSel">
+      <option value="all">ทุกบัญชี</option>
     </select>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="ค้นหา ชื่อ/คิว/บัตร">
@@ -203,10 +206,6 @@
     <button class="btn-logout" id="logoutBtn">ออก</button>
   </div>
 </header>
-
-<div class="subbar">
-  <h2 id="subCount">จำนวน Ticket ปัจจุบัน 0 รายการ</h2>
-</div>
 
 <div class="list" id="list"></div>
 
@@ -253,9 +252,14 @@ function setLive(on, label){
 
 function visibleTickets(){
   const f = document.getElementById('filterSel').value;
+  const owner = document.getElementById('ownerSel').value;
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   return tickets.filter(t => {
     if(f !== 'all' && t.status !== f) return false;
+    if(owner !== 'all'){
+      if(owner === '__none__'){ if(t.ownerUser) return false; }   // เฉพาะเคสที่ยังไม่มีเจ้าของ
+      else if(t.ownerUser !== owner) return false;
+    }
     if(q){
       const hay = `${t.ticketCode} ${t.fullname} ${t.idcard} ${t.contractno}`.toLowerCase();
       if(!hay.includes(q)) return false;
@@ -264,12 +268,33 @@ function visibleTickets(){
   });
 }
 
+// อัปเดตตัวเลือกบัญชีใน dropdown ตามเจ้าของเคสที่มีจริง
+function refreshOwnerOptions(){
+  const sel = document.getElementById('ownerSel');
+  const prev = sel.value;
+  const owners = new Map(); // username -> displayName
+  let hasNone = false;
+  tickets.forEach(t => {
+    if(t.ownerUser) owners.set(t.ownerUser, t.ownerName || t.ownerUser);
+    else hasNone = true;
+  });
+
+  let html = '<option value="all">ทุกบัญชี</option>';
+  if(hasNone) html += '<option value="__none__">ยังไม่มีเจ้าของ</option>';
+  [...owners.entries()].forEach(([u, name]) => {
+    html += `<option value="${escapeHtml(u)}">${escapeHtml(name)}</option>`;
+  });
+  sel.innerHTML = html;
+  // คงค่าที่เลือกไว้ถ้ายังมีตัวเลือกนั้น
+  if([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
 function render(){
   const list = document.getElementById('list');
   const items = visibleTickets();
 
   document.getElementById('countPill').textContent = `${tickets.length} คิว`;
-  document.getElementById('subCount').textContent = `จำนวน Ticket ปัจจุบัน ${items.length} รายการ`;
+  refreshOwnerOptions();
 
   if(items.length === 0){
     [...list.querySelectorAll('.row')].forEach(c => c.remove());
@@ -309,12 +334,10 @@ function buildRow(t){
   const row = document.createElement('div');
   row.className = 'row' + (t.status === 'กำลังดำเนินการ' ? ' doing' : '');
   row.dataset.code = t.ticketCode;
-  const avatar = t.lockUrl
-    ? `<img src="${escapeHtml(t.lockUrl)}" alt="">`
-    : '<span style="font-size:22px;">👤</span>';
+  const avatar = ownerAvatarHtml(t);
   row.innerHTML = `
     <div class="qhead">
-      <div class="avatar">${avatar}</div>
+      <div class="avatar" title="${t.ownerName ? 'เจ้าของ: ' + escapeHtml(t.ownerName) : 'ยังไม่มีเจ้าของ'}">${avatar}</div>
       <div class="qmeta">
         <div class="qlabel">รหัสคิวลูกค้า</div>
         <div class="qcode">${escapeHtml(t.ticketCode)}</div>
@@ -334,11 +357,28 @@ function buildRow(t){
   return row;
 }
 
+// รูป avatar เจ้าของเคส: มีรูป -> โชว์รูป, มีชื่อแต่ไม่มีรูป -> ตัวอักษรแรก, ไม่มีเจ้าของ -> วงว่าง
+function ownerAvatarHtml(t){
+  if(t.ownerAvatar){
+    return `<img src="${escapeHtml(t.ownerAvatar)}" alt="" onerror="this.parentNode.textContent='${t.ownerName ? escapeHtml(t.ownerName.charAt(0)) : ''}'">`;
+  }
+  if(t.ownerName){
+    return `<span style="font-size:22px;font-weight:700;">${escapeHtml(t.ownerName.charAt(0))}</span>`;
+  }
+  return ''; // ยังไม่มีเจ้าของ = วงว่าง
+}
+
 function updateRow(row, t){
   const isDoing = t.status === 'กำลังดำเนินการ';
   row.classList.toggle('doing', isDoing);
   const btn = row.querySelector('.btn-doing');
   if(btn) btn.textContent = isDoing ? 'ดำเนินการอยู่' : 'ยังไม่ดำเนินการ';
+  // อัปเดตรูปเจ้าของเผื่อมีคนเพิ่งกดรับเคส
+  const av = row.querySelector('.qhead .avatar');
+  if(av){
+    av.innerHTML = ownerAvatarHtml(t);
+    av.title = t.ownerName ? 'เจ้าของ: ' + t.ownerName : 'ยังไม่มีเจ้าของ';
+  }
 }
 
 async function setStatus(ticketCode, status){
@@ -351,7 +391,7 @@ async function setStatus(ticketCode, status){
   }
 
   try{
-    const res = await api({ action:'setStatus', ticketCode, status });
+    const res = await api({ action:'setStatus', ticketCode, status, username: (me && me.username) || '' });
     if(!res.ok){ showToast(res.message || 'อัปเดตไม่สำเร็จ'); }
     else if(status === 'กำลังดำเนินการ'){ showToast(`${ticketCode} กำลังดำเนินการ`); }
     else if(status === 'เสร็จแล้ว'){ showToast(`${ticketCode} เสร็จสิ้น`); }
@@ -387,6 +427,7 @@ document.addEventListener('visibilitychange', () => {
 
 document.getElementById('refreshBtn').addEventListener('click', load);
 document.getElementById('filterSel').addEventListener('change', render);
+document.getElementById('ownerSel').addEventListener('change', render);
 document.getElementById('searchInput').addEventListener('input', render);
 
 function applyMe(){
