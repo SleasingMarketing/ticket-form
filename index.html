@@ -97,6 +97,10 @@
       <input type="tel" id="idcard" maxlength="13" placeholder="เลข 13 หลัก">
       <div class="err" id="err-idcard">กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก</div>
 
+      <label for="contractno">เลขที่สัญญา <span style="font-weight:400;color:var(--ink-soft)">(ถ้ามี)</span></label>
+      <input type="tel" id="contractno" maxlength="15" placeholder="เลข 15 หลัก">
+      <div class="err" id="err-contractno">เลขที่สัญญาต้องมี 15 หลัก</div>
+
       <label>อัปโหลดรูปหน้าล็อก</label>
       <div class="upload-box" id="box-lock">
         <span class="hint">แตะเพื่อเลือกรูป</span>
@@ -130,6 +134,8 @@
       <div class="footer">
         <button class="copy" id="copyBtn">คัดลอกข้อมูลคิว</button>
         <p class="warn">* กดปุ่มด้านบนแล้วนำไปวางในแชท LINE นี้ได้เลย<br>เจ้าหน้าที่จะติดต่อกลับตามลำดับคิว</p>
+        <div id="statusBox" class="status-box"></div>
+        <button class="check" id="checkBtn">เช็คสถานะคิวตอนนี้</button>
       </div>
     </div>
   </div>
@@ -162,34 +168,49 @@ function resizeImage(file, maxW = 1000, quality = 0.7){
   });
 }
 
-function bindUploadBox(boxId, inputId){
+function bindUploadBox(boxId, inputId, opts){
   const box = document.getElementById(boxId);
   const input = document.getElementById(inputId);
   input.addEventListener('change', async function handler(){
     if(!input.files[0]) return;
-    const dataUrl = await resizeImage(input.files[0]);
+    const dataUrl = await resizeImage(input.files[0], opts.maxW, opts.quality);
     box.dataset.image = dataUrl;
     box.classList.add('has-img');
     box.innerHTML = `<img src="${dataUrl}"><input type="file" accept="image/*" id="${inputId}">`;
     document.getElementById(inputId).addEventListener('change', handler, {once:true});
   }, {once:true});
 }
-bindUploadBox('box-lock','file-lock');
-bindUploadBox('box-slip','file-slip');
+bindUploadBox('box-lock','file-lock', {maxW:720, quality:0.6});   // หน้าล็อก ย่อแรงกว่า ประหยัดพื้นที่
+bindUploadBox('box-slip','file-slip', {maxW:1000, quality:0.7});  // สลิป เก็บรายละเอียดยอดเงิน
 
 function validate(){
   let ok = true;
   const fullname = document.getElementById('fullname').value.trim();
   const idcard = document.getElementById('idcard').value.trim();
+  const contractno = document.getElementById('contractno').value.trim();
   const lockImg = document.getElementById('box-lock').dataset.image;
   const slipImg = document.getElementById('box-slip').dataset.image;
 
   toggle('err-fullname', !fullname); if(!fullname) ok = false;
   toggle('err-idcard', idcard.length !== 13); if(idcard.length !== 13) ok = false;
+  toggle('err-contractno', contractno.length > 0 && contractno.length !== 15);
+  if(contractno.length > 0 && contractno.length !== 15) ok = false;
   toggle('err-lock', !lockImg); if(!lockImg) ok = false;
   toggle('err-slip', !slipImg); if(!slipImg) ok = false;
   return ok;
 }
+
+// กรองการพิมพ์ในช่องกรอก
+// ชื่อ: เฉพาะตัวอักษรไทย/อังกฤษ เว้นวรรค จุด — ตัวเลขและอักขระอื่นพิมพ์ไม่เข้า
+document.getElementById('fullname').addEventListener('input', function(){
+  this.value = this.value.replace(/[^ก-๙a-zA-Z\s.]/g, '');
+});
+// เลขบัตร + เลขที่สัญญา: เฉพาะตัวเลข
+['idcard','contractno'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function(){
+    this.value = this.value.replace(/\D/g, '');
+  });
+});
 
 let lastPayload = null;
 
@@ -230,6 +251,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const payload = {
     fullname: document.getElementById('fullname').value.trim(),
     idcard: document.getElementById('idcard').value.trim(),
+    contractno: document.getElementById('contractno').value.trim(),
     lockImage: document.getElementById('box-lock').dataset.image,
     slipImage: document.getElementById('box-slip').dataset.image
   };
