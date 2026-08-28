@@ -79,6 +79,32 @@
   }
   button.check:disabled{opacity:.6;}
   .hidden{display:none;}
+
+  /* popup แจ้งลงทะเบียนซ้ำ */
+  .overlay{
+    position:fixed;inset:0;background:rgba(26,35,51,.55);
+    display:none;align-items:center;justify-content:center;padding:24px;z-index:50;
+  }
+  .overlay.show{display:flex;}
+  .popup{
+    background:var(--card);border-radius:16px;padding:28px 24px 22px;max-width:360px;width:100%;
+    text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.2);
+  }
+  .popup-icon{
+    width:56px;height:56px;border-radius:50%;background:#FCEBE8;color:var(--danger);
+    font-size:32px;font-weight:800;line-height:56px;margin:0 auto 14px;
+  }
+  .popup h2{font-size:19px;margin:0 0 8px;color:var(--ink);}
+  .popup-msg{font-size:14px;color:var(--ink-soft);line-height:1.6;margin:0 0 18px;}
+  .popup-box{background:var(--bg);border-radius:10px;padding:6px 14px;margin-bottom:20px;}
+  .popup-row{display:flex;justify-content:space-between;padding:9px 0;font-size:14px;}
+  .popup-row+.popup-row{border-top:1px solid var(--line);}
+  .popup-row span:first-child{color:var(--ink-soft);}
+  .popup-row span:last-child{color:var(--ink);font-weight:700;}
+  .popup-btn{
+    width:100%;padding:13px;border:none;border-radius:10px;
+    background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -86,7 +112,7 @@
 
   <div id="formView">
     <div class="card">
-      <h1>แบบฟอร์มลงทะเบียน รับคิวแจ้งปลดล็อค</h1>
+      <h1>แบบฟอร์มลงทะเบียนรับคิวปลดล็อค</h1>
       <p class="desc">กรุณากรอกข้อมูลให้ครบถ้วน เจ้าหน้าที่จะติดต่อกลับตามลำดับคิวที่ลงทะเบียน</p>
 
       <label for="fullname">ชื่อ - นามสกุล</label>
@@ -130,13 +156,25 @@
       <div class="body">
         <div class="row"><span>ชื่อ</span><span id="showName">-</span></div>
         <div class="row"><span>เลขบัตรประชาชน</span><span id="showId">-</span></div>
+        <div class="row" id="rowContract"><span>เลขที่สัญญา</span><span id="showContract">-</span></div>
       </div>
       <div class="footer">
         <button class="copy" id="copyBtn">คัดลอกข้อมูลคิว</button>
         <p class="warn">* กดปุ่มด้านบนแล้วนำไปวางในแชท LINE นี้ได้เลย<br>เจ้าหน้าที่จะติดต่อกลับตามลำดับคิว</p>
-        <div id="statusBox" class="status-box"></div>
-        <button class="check" id="checkBtn">เช็คสถานะคิวตอนนี้</button>
       </div>
+    </div>
+  </div>
+
+  <div id="dupOverlay" class="overlay">
+    <div class="popup">
+      <div class="popup-icon">!</div>
+      <h2>ลงทะเบียนซ้ำ</h2>
+      <p class="popup-msg">เลขบัตรประชาชนนี้ได้ลงทะเบียนไว้แล้ว<br>ไม่สามารถลงทะเบียนใหม่ได้ภายใน 2 วัน</p>
+      <div class="popup-box">
+        <div class="popup-row"><span>คิวเดิมของคุณ</span><span id="dupCode">-</span></div>
+        <div class="popup-row"><span>วันที่ลงทะเบียน</span><span id="dupDate">-</span></div>
+      </div>
+      <button class="popup-btn" id="dupCloseBtn">รับทราบ</button>
     </div>
   </div>
 
@@ -263,11 +301,25 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    lastPayload = { ticketCode: data.ticketCode, fullname: payload.fullname, idcard: payload.idcard };
+
+    // ลงทะเบียนซ้ำภายใน 2 วัน -> ไม่สร้างคิวใหม่ เด้ง popup แจ้ง
+    if(data.blocked){
+      showDupPopup(data.ticketCode, data.registeredDate);
+      btn.disabled = false; btn.textContent = 'ส่งเรื่องและรับคิว';
+      return;
+    }
+
+    lastPayload = { ticketCode: data.ticketCode, fullname: payload.fullname, idcard: payload.idcard, contractno: payload.contractno };
 
     document.getElementById('ticketCode').textContent = data.ticketCode;
     document.getElementById('showName').textContent = payload.fullname;
     document.getElementById('showId').textContent = payload.idcard;
+    // ซ่อนแถวเลขที่สัญญาถ้าลูกค้าไม่ได้กรอก
+    if(payload.contractno){
+      document.getElementById('showContract').textContent = payload.contractno;
+    } else {
+      document.getElementById('rowContract').style.display = 'none';
+    }
 
     toggle('formView', false);
     toggle('successView', true);
@@ -281,7 +333,10 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
 document.getElementById('copyBtn').addEventListener('click', async () => {
   if(!lastPayload) return;
-  const text = `คิวที่ ${lastPayload.ticketCode}\nชื่อ: ${lastPayload.fullname}\nเลขบัตรประชาชน: ${lastPayload.idcard}`;
+  let text = `คิวที่ ${lastPayload.ticketCode}\nชื่อ: ${lastPayload.fullname}\nเลขบัตรประชาชน: ${lastPayload.idcard}`;
+  if(lastPayload.contractno){
+    text += `\nเลขที่สัญญา: ${lastPayload.contractno}`;
+  }
   const btn = document.getElementById('copyBtn');
 
   try{
@@ -306,32 +361,14 @@ document.getElementById('copyBtn').addEventListener('click', async () => {
   }, 2500);
 });
 
-document.getElementById('checkBtn').addEventListener('click', async () => {
-  if(!lastPayload) return;
-  const btn = document.getElementById('checkBtn');
-  const box = document.getElementById('statusBox');
-  btn.disabled = true; btn.textContent = 'กำลังเช็ค...';
-
-  try{
-    const data = await fetchQueueStatus_(lastPayload.ticketCode);
-    renderPosition_(data);
-
-    if(!data.found){
-      box.innerHTML = 'ไม่พบข้อมูลคิว กรุณาลองใหม่';
-    } else if(data.status === 'เสร็จแล้ว'){
-      box.innerHTML = '<div class="big">ดำเนินการเสร็จแล้ว</div>ขอบคุณที่ใช้บริการค่ะ';
-    } else if(data.ahead === 0){
-      box.innerHTML = '<div class="big">ถึงคิวคุณแล้ว!</div>เจ้าหน้าที่กำลังติดต่อกลับ';
-    } else {
-      box.innerHTML = `<div class="big">เหลืออีก ${data.ahead} คิว</div>ก่อนถึงคิวของคุณ`;
-    }
-    box.classList.add('show');
-  }catch(err){
-    box.innerHTML = 'เช็คสถานะไม่สำเร็จ กรุณาลองใหม่';
-    box.classList.add('show');
-  }
-
-  btn.disabled = false; btn.textContent = 'เช็คสถานะคิวตอนนี้';
+// popup ลงทะเบียนซ้ำ
+function showDupPopup(ticketCode, registeredDate){
+  document.getElementById('dupCode').textContent = ticketCode || '-';
+  document.getElementById('dupDate').textContent = registeredDate || '-';
+  document.getElementById('dupOverlay').classList.add('show');
+}
+document.getElementById('dupCloseBtn').addEventListener('click', () => {
+  document.getElementById('dupOverlay').classList.remove('show');
 });
 </script>
 </body>
