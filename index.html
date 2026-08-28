@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ลงทะเบียน Ticket - ระบบคิว</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root{
     --bg:#F5F6F8;
@@ -121,7 +122,7 @@
 
       <label for="idcard">เลขบัตรประชาชน</label>
       <input type="tel" id="idcard" maxlength="13" placeholder="เลข 13 หลัก">
-      <div class="err" id="err-idcard">กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก</div>
+      <div class="err" id="err-idcard">กรุณากรอกเลขบัตรประชาชนให้ถูกต้อง (13 หลัก)</div>
 
       <label for="contractno">เลขที่สัญญา <span style="font-weight:400;color:var(--ink-soft)">(ถ้ามี)</span></label>
       <input type="tel" id="contractno" maxlength="15" placeholder="เลข 15 หลัก">
@@ -169,7 +170,7 @@
     <div class="popup">
       <div class="popup-icon">!</div>
       <h2>ลงทะเบียนซ้ำ</h2>
-      <p class="popup-msg">เลขบัตรประชาชนนี้ได้ลงทะเบียนไว้แล้ว<br>ไม่สามารถลงทะเบียนใหม่ได้ภายใน 2 วัน</p>
+      <p class="popup-msg">เลขบัตรประชาชนนี้ได้ลงทะเบียนไว้แล้ว<br>ไม่สามารถลงทะเบียนใหม่ได้ภายใน 3 วัน</p>
       <div class="popup-box">
         <div class="popup-row"><span>คิวเดิมของคุณ</span><span id="dupCode">-</span></div>
         <div class="popup-row"><span>วันที่ลงทะเบียน</span><span id="dupDate">-</span></div>
@@ -183,7 +184,24 @@
 <script>
 // ===== ตั้งค่าตรงนี้ =====
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgobwjjz751jjq9KGNExNlD7TqE5SZqM0mqOSaG0JUs1OkBHs7rXv9WldV_2OwKYmi/exec"; // ลิงก์จาก Deploy > Web app
+const LIFF_ID = "YOUR_LIFF_ID"; // จาก LINE Developers Console เช่น "1234567890-AbcdEfgh"
 // =========================
+
+// เริ่มต้น LIFF (ถ้าเปิดผ่าน LIFF app จะปิดหน้าต่างกลับแชทได้)
+// ถ้าเปิดผ่านเว็บธรรมดา จะข้ามไป ฟอร์มยังใช้งานได้ปกติ
+let liffReady = false;
+if(window.liff && LIFF_ID !== "YOUR_LIFF_ID"){
+  liff.init({ liffId: LIFF_ID })
+    .then(() => { liffReady = true; })
+    .catch(err => console.warn('LIFF init failed:', err));
+}
+
+// ปิดหน้าต่าง LIFF กลับไปที่แชท (เรียกได้เฉพาะตอนเปิดผ่าน LIFF)
+function closeLiffWindow(){
+  if(liffReady && liff.isInClient()){
+    liff.closeWindow();
+  }
+}
 
 function toggle(id, show){ document.getElementById(id).classList.toggle('hidden', !show); }
 
@@ -221,6 +239,17 @@ function bindUploadBox(boxId, inputId, opts){
 bindUploadBox('box-lock','file-lock', {maxW:720, quality:0.6});   // หน้าล็อก ย่อแรงกว่า ประหยัดพื้นที่
 bindUploadBox('box-slip','file-slip', {maxW:1000, quality:0.7});  // สลิป เก็บรายละเอียดยอดเงิน
 
+// ตรวจ checksum เลขบัตรประชาชนไทย (13 หลัก)
+function isValidThaiId(id){
+  if(!/^\d{13}$/.test(id)) return false;
+  let sum = 0;
+  for(let i = 0; i < 12; i++){
+    sum += parseInt(id.charAt(i), 10) * (13 - i);
+  }
+  const check = (11 - (sum % 11)) % 10;
+  return check === parseInt(id.charAt(12), 10);
+}
+
 function validate(){
   let ok = true;
   const fullname = document.getElementById('fullname').value.trim();
@@ -230,7 +259,8 @@ function validate(){
   const slipImg = document.getElementById('box-slip').dataset.image;
 
   toggle('err-fullname', !fullname); if(!fullname) ok = false;
-  toggle('err-idcard', idcard.length !== 13); if(idcard.length !== 13) ok = false;
+  const idBad = !isValidThaiId(idcard);
+  toggle('err-idcard', idBad); if(idBad) ok = false;
   toggle('err-contractno', contractno.length > 0 && contractno.length !== 15);
   if(contractno.length > 0 && contractno.length !== 15) ok = false;
   toggle('err-lock', !lockImg); if(!lockImg) ok = false;
@@ -281,6 +311,37 @@ async function updateQueuePosition_(ticketCode){
   }
 }
 
+// ===== ระบบอัปเดตคิวอัตโนมัติทุก 30 วินาที =====
+const POLL_INTERVAL_MS = 30000;
+let pollTimer = null;
+
+// อัปเดตคิว 1 ครั้ง และหยุด polling ถ้าถึงคิว/เสร็จแล้ว
+async function pollOnce_(ticketCode){
+  const data = await updateQueuePosition_(ticketCode);
+  if(data && data.found && (data.status === 'เสร็จแล้ว' || data.ahead === 0)){
+    stopPolling_(); // ถึงคิวหรือเสร็จแล้ว ไม่ต้องเช็คต่อ
+  }
+}
+
+function startPolling_(ticketCode){
+  stopPolling_();
+  pollOnce_(ticketCode); // เช็คทันทีครั้งแรก
+  pollTimer = setInterval(() => pollOnce_(ticketCode), POLL_INTERVAL_MS);
+}
+
+function stopPolling_(){
+  if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+}
+
+// หยุดเช็คเมื่อลูกค้าสลับไปแท็บอื่น/ย่อหน้าจอ กลับมาแล้วค่อยเช็คต่อ (ประหยัดโควตา)
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden){
+    stopPolling_();
+  } else if(lastPayload && !document.getElementById('successView').classList.contains('hidden')){
+    startPolling_(lastPayload.ticketCode);
+  }
+});
+
 document.getElementById('submitBtn').addEventListener('click', async () => {
   if(!validate()) return;
   const btn = document.getElementById('submitBtn');
@@ -302,8 +363,10 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     });
     const data = await res.json();
 
-    // ลงทะเบียนซ้ำภายใน 2 วัน -> ไม่สร้างคิวใหม่ เด้ง popup แจ้ง
+    // ลงทะเบียนซ้ำภายใน 3 วัน -> ไม่สร้างคิวใหม่ เด้ง popup แจ้ง
+    // เก็บข้อมูลที่ลูกค้ากรอก + เลขคิวเดิม ไว้ให้ปุ่ม "รับทราบ" พาไปหน้าคิวเพื่อคัดลอกได้
     if(data.blocked){
+      lastPayload = { ticketCode: data.ticketCode, fullname: payload.fullname, idcard: payload.idcard, contractno: payload.contractno };
       showDupPopup(data.ticketCode, data.registeredDate);
       btn.disabled = false; btn.textContent = 'ส่งเรื่องและรับคิว';
       return;
@@ -324,7 +387,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     toggle('formView', false);
     toggle('successView', true);
 
-    updateQueuePosition_(data.ticketCode); // เช็คคิวปัจจุบันอัตโนมัติทันที
+    startPolling_(data.ticketCode); // เริ่มอัปเดตคิวอัตโนมัติทุก 30 วินาที
   }catch(err){
     btn.disabled = false; btn.textContent = 'ส่งเรื่องและรับคิว';
     alert('ส่งไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
@@ -355,10 +418,15 @@ document.getElementById('copyBtn').addEventListener('click', async () => {
 
   btn.textContent = 'คัดลอกแล้ว ✓';
   btn.classList.add('copied');
+
+  // โชว์ feedback สักครู่ให้ลูกค้าเห็นว่าคัดลอกแล้ว จากนั้นปิดหน้าต่างกลับแชท
+  // (ถ้าเปิดผ่านเว็บธรรมดา closeLiffWindow จะไม่ทำอะไร ปุ่มจะ reset กลับตามปกติ)
   setTimeout(() => {
+    stopPolling_(); // หยุดเช็คคิวก่อนปิด
+    closeLiffWindow();
     btn.textContent = 'คัดลอกข้อมูลคิว';
     btn.classList.remove('copied');
-  }, 2500);
+  }, 1200);
 });
 
 // popup ลงทะเบียนซ้ำ
@@ -369,6 +437,24 @@ function showDupPopup(ticketCode, registeredDate){
 }
 document.getElementById('dupCloseBtn').addEventListener('click', () => {
   document.getElementById('dupOverlay').classList.remove('show');
+  if(!lastPayload) return;
+
+  // พาไปหน้าแสดงคิว (เลขคิวเดิม) เพื่อให้ลูกค้าคัดลอกข้อมูลได้ เผื่อยังไม่ได้คัดลอก
+  document.getElementById('ticketCode').textContent = lastPayload.ticketCode;
+  document.getElementById('showName').textContent = lastPayload.fullname;
+  document.getElementById('showId').textContent = lastPayload.idcard;
+  if(lastPayload.contractno){
+    document.getElementById('showContract').textContent = lastPayload.contractno;
+    document.getElementById('rowContract').style.display = '';
+  } else {
+    document.getElementById('rowContract').style.display = 'none';
+  }
+  document.getElementById('queuePosition').textContent = 'กำลังเช็คคิว...';
+
+  toggle('formView', false);
+  toggle('successView', true);
+
+  startPolling_(lastPayload.ticketCode); // อัปเดตคิวเดิมอัตโนมัติเช่นกัน
 });
 </script>
 </body>
