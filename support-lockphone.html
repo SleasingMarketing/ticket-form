@@ -117,6 +117,15 @@
   .row:not(.doing) .btn-done{background:#fff;color:var(--ink-soft);border-color:var(--line);}
   .row:not(.doing) .btn-done:hover{background:var(--danger);color:#fff;border-color:var(--danger);}
 
+  /* สถานะเสร็จแล้ว: การ์ดจางลง หัวเป็นสีเทา ป้ายเสร็จสิ้น */
+  .row.done{opacity:.72;}
+  .row.done .qhead{background:#6B7482;}
+  .done-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:#E7F1EE;color:var(--accent);font-weight:700;font-size:14px;
+    padding:11px 18px;border-radius:9px;white-space:nowrap;
+  }
+
   .empty{
     text-align:center;padding:80px 20px;color:var(--ink-soft);
     background:var(--card);border-radius:14px;
@@ -194,6 +203,7 @@
       <option value="all">สถานะทั้งหมด</option>
       <option value="รอคิว">ยังไม่ดำเนินการ</option>
       <option value="กำลังดำเนินการ">ดำเนินการอยู่</option>
+      <option value="เสร็จแล้ว">ดำเนินการแล้ว</option>
     </select>
     <select class="filter-sel" id="ownerSel">
       <option value="all">ทุกบัญชี</option>
@@ -222,6 +232,7 @@ const POLL_MS = 5000;
 
 let tickets = [];
 let me = null;
+let allAdmins = [];   // รายชื่อแอดมินทั้งหมด (สำหรับ filter)
 let busy = new Set();
 let pollTimer = null;
 
@@ -257,8 +268,7 @@ function visibleTickets(){
   return tickets.filter(t => {
     if(f !== 'all' && t.status !== f) return false;
     if(owner !== 'all'){
-      if(owner === '__none__'){ if(t.ownerUser) return false; }   // เฉพาะเคสที่ยังไม่มีเจ้าของ
-      else if(t.ownerUser !== owner) return false;
+      if(t.ownerUser !== owner) return false;
     }
     if(q){
       const hay = `${t.ticketCode} ${t.fullname} ${t.idcard} ${t.contractno}`.toLowerCase();
@@ -268,24 +278,16 @@ function visibleTickets(){
   });
 }
 
-// อัปเดตตัวเลือกบัญชีใน dropdown ตามเจ้าของเคสที่มีจริง
+// อัปเดตตัวเลือกบัญชีใน dropdown จากรายชื่อแอดมินทั้งหมด
 function refreshOwnerOptions(){
   const sel = document.getElementById('ownerSel');
   const prev = sel.value;
-  const owners = new Map(); // username -> displayName
-  let hasNone = false;
-  tickets.forEach(t => {
-    if(t.ownerUser) owners.set(t.ownerUser, t.ownerName || t.ownerUser);
-    else hasNone = true;
-  });
 
   let html = '<option value="all">ทุกบัญชี</option>';
-  if(hasNone) html += '<option value="__none__">ยังไม่มีเจ้าของ</option>';
-  [...owners.entries()].forEach(([u, name]) => {
-    html += `<option value="${escapeHtml(u)}">${escapeHtml(name)}</option>`;
+  allAdmins.forEach(a => {
+    html += `<option value="${escapeHtml(a.username)}">${escapeHtml(a.displayName)}</option>`;
   });
   sel.innerHTML = html;
-  // คงค่าที่เลือกไว้ถ้ายังมีตัวเลือกนั้น
   if([...sel.options].some(o => o.value === prev)) sel.value = prev;
 }
 
@@ -332,7 +334,7 @@ function cssEscape(s){ return String(s).replace(/"/g, '\\"'); }
 
 function buildRow(t){
   const row = document.createElement('div');
-  row.className = 'row' + (t.status === 'กำลังดำเนินการ' ? ' doing' : '');
+  row.className = 'row' + rowStatusClass(t.status);
   row.dataset.code = t.ticketCode;
   const avatar = ownerAvatarHtml(t);
   row.innerHTML = `
@@ -348,13 +350,31 @@ function buildRow(t){
       <div class="field"><div class="k">เลขบัตรประชาชน</div><div class="v">${escapeHtml(t.idcard)}</div></div>
       ${t.contractno ? `<div class="field"><div class="k">เลขที่สัญญา</div><div class="v">${escapeHtml(t.contractno)}</div></div>` : ''}
     </div>
-    <div class="actions">
-      <button class="btn-doing">${t.status === 'กำลังดำเนินการ' ? 'ดำเนินการอยู่' : 'ยังไม่ดำเนินการ'}</button>
-      <button class="btn-done">ดำเนินการแล้ว</button>
-    </div>`;
-  row.querySelector('.btn-doing').addEventListener('click', () => setStatus(t.ticketCode, 'กำลังดำเนินการ'));
-  row.querySelector('.btn-done').addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
+    <div class="actions">${actionsHtml(t)}</div>`;
+  bindRowActions(row, t);
   return row;
+}
+
+function rowStatusClass(status){
+  if(status === 'กำลังดำเนินการ') return ' doing';
+  if(status === 'เสร็จแล้ว') return ' done';
+  return '';
+}
+
+// ปุ่มตามสถานะ: เสร็จแล้ว = โชว์ป้าย "เสร็จสิ้น" แทนปุ่ม
+function actionsHtml(t){
+  if(t.status === 'เสร็จแล้ว'){
+    return '<span class="done-badge">✓ ดำเนินการเสร็จสิ้น</span>';
+  }
+  const doingLabel = t.status === 'กำลังดำเนินการ' ? 'ดำเนินการอยู่' : 'ยังไม่ดำเนินการ';
+  return `<button class="btn-doing">${doingLabel}</button><button class="btn-done">ดำเนินการแล้ว</button>`;
+}
+
+function bindRowActions(row, t){
+  const bd = row.querySelector('.btn-doing');
+  const dn = row.querySelector('.btn-done');
+  if(bd) bd.addEventListener('click', () => setStatus(t.ticketCode, 'กำลังดำเนินการ'));
+  if(dn) dn.addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
 }
 
 // รูป avatar เจ้าของเคส: มีรูป -> โชว์รูป, มีชื่อแต่ไม่มีรูป -> ตัวอักษรแรก, ไม่มีเจ้าของ -> วงว่าง
@@ -369,11 +389,16 @@ function ownerAvatarHtml(t){
 }
 
 function updateRow(row, t){
-  const isDoing = t.status === 'กำลังดำเนินการ';
-  row.classList.toggle('doing', isDoing);
-  const btn = row.querySelector('.btn-doing');
-  if(btn) btn.textContent = isDoing ? 'ดำเนินการอยู่' : 'ยังไม่ดำเนินการ';
-  // อัปเดตรูปเจ้าของเผื่อมีคนเพิ่งกดรับเคส
+  // อัปเดต class สถานะ
+  row.className = 'row' + rowStatusClass(t.status);
+  row.dataset.code = t.ticketCode;
+  // อัปเดตปุ่ม/ป้าย
+  const actions = row.querySelector('.actions');
+  if(actions){
+    actions.innerHTML = actionsHtml(t);
+    bindRowActions(row, t);
+  }
+  // อัปเดตรูปเจ้าของ
   const av = row.querySelector('.qhead .avatar');
   if(av){
     av.innerHTML = ownerAvatarHtml(t);
@@ -384,11 +409,6 @@ function updateRow(row, t){
 async function setStatus(ticketCode, status){
   if(busy.has(ticketCode)) return;
   busy.add(ticketCode);
-
-  if(status === 'เสร็จแล้ว'){
-    const row = document.querySelector(`.row[data-code="${cssEscape(ticketCode)}"]`);
-    if(row){ row.classList.add('leaving'); setTimeout(() => row.remove(), 380); }
-  }
 
   try{
     const res = await api({ action:'setStatus', ticketCode, status, username: (me && me.username) || '' });
@@ -440,9 +460,17 @@ function applyMe(){
   }
 }
 
+async function loadAdmins(){
+  try{
+    const res = await api({ action:'admins' });
+    if(res.ok){ allAdmins = res.admins; refreshOwnerOptions(); }
+  }catch(err){ /* ถ้าโหลดไม่ได้ dropdown จะมีแค่ทุกบัญชี/ยังไม่มีเจ้าของ */ }
+}
+
 function enterApp(){
   applyMe();
   document.getElementById('gate').classList.add('hidden');
+  loadAdmins();
   load();
   startPolling();
 }
