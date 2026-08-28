@@ -1,1 +1,361 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการคิว - S Leasing</title>
+<style>
+  :root{
+    --bg:#EEF0F3;
+    --card:#FFFFFF;
+    --ink:#1A2333;
+    --ink-soft:#6B7482;
+    --line:#E4E7EC;
+    --accent:#0F6656;
+    --accent-deep:#0C5245;
+    --danger:#C0392B;
+    --danger-deep:#A93226;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh;}
 
+  header{
+    position:sticky;top:0;z-index:10;
+    background:var(--card);border-bottom:1px solid var(--line);
+    padding:14px 20px;display:flex;align-items:center;gap:14px;
+  }
+  header h1{font-size:17px;margin:0;font-weight:800;}
+  header .count{
+    font-size:13px;color:var(--accent);font-weight:700;
+    background:#E7F1EE;padding:4px 11px;border-radius:20px;
+  }
+  header .live{
+    margin-left:auto;display:flex;align-items:center;gap:7px;
+    font-size:12.5px;color:var(--ink-soft);
+  }
+  header .dot{width:8px;height:8px;border-radius:50%;background:#33B679;animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.8);}}
+  header button.refresh{
+    border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
+    border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  header button.refresh:active{transform:scale(.96);}
+
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:18px;padding:20px;max-width:1600px;margin:0 auto;
+  }
+
+  .ticket{
+    background:var(--card);border-radius:16px;overflow:hidden;
+    box-shadow:0 2px 10px rgba(26,35,51,.06);
+    display:flex;flex-direction:column;
+    animation:cardIn .45s cubic-bezier(.2,.8,.2,1) both;
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  .ticket.leaving{opacity:0;transform:scale(.9) translateY(-8px);}
+  @keyframes cardIn{
+    from{opacity:0;transform:translateY(14px) scale(.97);}
+    to{opacity:1;transform:none;}
+  }
+
+  .ticket .head{
+    background:var(--accent);color:#fff;padding:14px 16px 16px;text-align:center;
+    transition:background .3s ease;
+  }
+  .ticket.doing .head{background:var(--accent-deep);}
+  .ticket .head .label{font-size:12px;opacity:.8;letter-spacing:.04em;}
+  .ticket .head .code{font-size:30px;font-weight:800;margin-top:2px;letter-spacing:.02em;}
+  .ticket .head .badge{
+    display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;
+    background:rgba(255,255,255,.18);padding:3px 12px;border-radius:20px;
+    min-height:20px;
+  }
+
+  .ticket .body{padding:16px 16px 6px;text-align:center;}
+  .ticket .body .name{font-size:17px;font-weight:700;margin-bottom:12px;}
+  .ticket .body .row{
+    display:flex;justify-content:space-between;gap:10px;
+    padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;
+  }
+  .ticket .body .row .k{color:var(--ink-soft);}
+  .ticket .body .row .v{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
+
+  .ticket .actions{display:flex;gap:8px;padding:14px 16px 16px;}
+  .ticket .actions button{
+    flex:1;border-radius:9px;padding:10px 6px;font-size:13.5px;font-weight:700;
+    cursor:pointer;border:1.5px solid transparent;transition:all .18s ease;
+    font-family:inherit;
+  }
+  .ticket .actions button:active{transform:scale(.95);}
+  .btn-doing{background:var(--accent);color:#fff;border-color:var(--accent);}
+  /* เมื่อคิวนี้อยู่สถานะกำลังดำเนินการ ปุ่มจะกลายเป็นขาวขอบเขียว */
+  .ticket.doing .btn-doing{background:#fff;color:var(--accent);border-color:var(--accent);}
+  .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .btn-done:hover{background:var(--danger-deep);}
+
+  .empty{
+    grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--ink-soft);
+  }
+  .empty .big{font-size:20px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;
+    opacity:0;pointer-events:none;transition:all .3s ease;z-index:20;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important;}
+  }
+
+  /* หน้าใส่ PIN */
+  .gate{
+    position:fixed;inset:0;background:var(--bg);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .gate.hidden{display:none;}
+  .gate-card{
+    background:var(--card);border-radius:16px;padding:32px 28px;max-width:340px;width:100%;
+    text-align:center;box-shadow:0 8px 30px rgba(26,35,51,.12);
+  }
+  .gate-card .lock{
+    width:52px;height:52px;border-radius:50%;background:#E7F1EE;color:var(--accent);
+    font-size:26px;line-height:52px;margin:0 auto 16px;
+  }
+  .gate-card h2{font-size:18px;margin:0 0 6px;}
+  .gate-card p{font-size:13px;color:var(--ink-soft);margin:0 0 20px;}
+  .gate-card input{
+    width:100%;padding:13px;border:1px solid var(--line);border-radius:10px;
+    font-size:20px;text-align:center;letter-spacing:.3em;font-family:inherit;
+    background:#FBFBFC;color:var(--ink);
+  }
+  .gate-card input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .gate-card button{
+    width:100%;margin-top:14px;padding:13px;border:none;border-radius:10px;
+    background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .gate-card .err{color:var(--danger);font-size:13px;margin-top:12px;min-height:18px;}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="lock">🔒</div>
+    <h2>จัดการคิวลูกค้า</h2>
+    <p>กรุณาใส่รหัสเพื่อเข้าใช้งาน</p>
+    <input type="tel" id="pinInput" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off">
+    <button id="pinBtn">เข้าสู่ระบบ</button>
+    <div class="err" id="pinErr"></div>
+  </div>
+</div>
+
+<header>
+  <h1>จัดการคิวลูกค้า</h1>
+  <span class="count" id="count">0 คิว</span>
+  <div class="live">
+    <span class="dot"></span><span id="liveLabel">อัปเดตอัตโนมัติ</span>
+    <button class="refresh" id="refreshBtn">รีเฟรช</button>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== ตั้งค่าตรงนี้ =====
+// URL ของ backend แอดมิน (Code-admin.gs) — คนละตัวกับ ticket-form ของลูกค้า
+const APPS_SCRIPT_URL = "YOUR_ADMIN_APPS_SCRIPT_WEB_APP_URL";
+const ADMIN_PIN = "082026"; // รหัสเข้าหน้าจัดการคิว
+// =========================
+
+const API_URL = https://script.google.com/macros/s/AKfycbyvjmsN19ZHE5qoKOnOfa_2PyusdU9tmYJFX4oiDnj7a1WX3gZ6_wiy55lmTXM70yrB/exec;
+const POLL_MS = 5000;
+
+let tickets = [];      // สถานะปัจจุบันที่แสดงอยู่
+let busy = new Set();  // คิวที่กำลังส่งอัปเดต กันกดซ้ำ
+let pollTimer = null;
+
+function api(params){
+  const qs = new URLSearchParams(params).toString();
+  return fetch(`${API_URL}?${qs}`).then(r => r.json());
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// วาดการ์ดใหม่ทั้งหมด (ใช้ diff เพื่อไม่ให้กระพริบ)
+function render(){
+  const grid = document.getElementById('grid');
+  document.getElementById('count').textContent = `${tickets.length} คิว`;
+
+  if(tickets.length === 0){
+    grid.innerHTML = '<div class="empty"><div class="big">ไม่มีคิวที่รอดำเนินการ</div>คิวใหม่จะปรากฏที่นี่อัตโนมัติ</div>';
+    return;
+  }
+
+  // ลบ empty state ถ้ามี
+  const emptyEl = grid.querySelector('.empty');
+  if(emptyEl) emptyEl.remove();
+
+  const existingCodes = new Set([...grid.children].map(c => c.dataset.code));
+  const newCodes = new Set(tickets.map(t => t.ticketCode));
+
+  // ลบการ์ดที่ไม่อยู่ในลิสต์แล้ว (ด้วย transition)
+  [...grid.children].forEach(card => {
+    if(!newCodes.has(card.dataset.code)){
+      card.classList.add('leaving');
+      setTimeout(() => card.remove(), 400);
+    }
+  });
+
+  // เพิ่ม/อัปเดตการ์ดตามลำดับ
+  tickets.forEach((t, idx) => {
+    let card = grid.querySelector(`[data-code="${t.ticketCode}"]`);
+    if(!card){
+      card = buildCard(t);
+      // แทรกตามตำแหน่ง
+      const ref = grid.children[idx];
+      if(ref) grid.insertBefore(card, ref);
+      else grid.appendChild(card);
+    } else {
+      updateCard(card, t);
+    }
+  });
+}
+
+function buildCard(t){
+  const card = document.createElement('div');
+  card.className = 'ticket' + (t.status === 'กำลังดำเนินการ' ? ' doing' : '');
+  card.dataset.code = t.ticketCode;
+  card.innerHTML = `
+    <div class="head">
+      <div class="label">คิวลูกค้า</div>
+      <div class="code">${t.ticketCode}</div>
+      <div class="badge">${t.status === 'กำลังดำเนินการ' ? 'กำลังดำเนินการ' : 'รอคิว'}</div>
+    </div>
+    <div class="body">
+      <div class="name">${escapeHtml(t.fullname)}</div>
+      <div class="row"><span class="k">เลขบัตรประชาชน</span><span class="v">${escapeHtml(t.idcard)}</span></div>
+      ${t.contractno ? `<div class="row"><span class="k">เลขที่สัญญา</span><span class="v">${escapeHtml(t.contractno)}</span></div>` : ''}
+    </div>
+    <div class="actions">
+      <button class="btn-doing">ดำเนินการอยู่</button>
+      <button class="btn-done">ดำเนินการแล้ว</button>
+    </div>`;
+  card.querySelector('.btn-doing').addEventListener('click', () => setStatus(t.ticketCode, 'กำลังดำเนินการ'));
+  card.querySelector('.btn-done').addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
+  return card;
+}
+
+// อัปเดตการ์ดที่มีอยู่แล้ว โดยไม่สร้างใหม่ (กันกระพริบ)
+function updateCard(card, t){
+  const isDoing = t.status === 'กำลังดำเนินการ';
+  card.classList.toggle('doing', isDoing);
+  const badge = card.querySelector('.badge');
+  if(badge) badge.textContent = isDoing ? 'กำลังดำเนินการ' : 'รอคิว';
+}
+
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+async function setStatus(ticketCode, status){
+  if(busy.has(ticketCode)) return;
+  busy.add(ticketCode);
+
+  // ถ้าเป็น "เสร็จแล้ว" ให้เอาการ์ดออกจาก UI ทันที (optimistic) แล้วดึงลิสต์ใหม่
+  if(status === 'เสร็จแล้ว'){
+    const card = document.querySelector(`[data-code="${ticketCode}"]`);
+    if(card){
+      card.classList.add('leaving');
+      setTimeout(() => card.remove(), 400);
+    }
+  }
+
+  try{
+    const res = await api({ action:'setStatus', ticketCode, status });
+    if(!res.ok){ showToast(res.message || 'อัปเดตไม่สำเร็จ'); }
+    else if(status === 'กำลังดำเนินการ'){ showToast(`${ticketCode} กำลังดำเนินการ`); }
+    else if(status === 'เสร็จแล้ว'){ showToast(`${ticketCode} เสร็จแล้ว`); }
+    await load(); // ดึงลิสต์ล่าสุด (คิวใหม่จะเลื่อนเข้ามาต่อท้าย)
+  }catch(err){
+    showToast('เชื่อมต่อไม่สำเร็จ');
+    await load();
+  }finally{
+    busy.delete(ticketCode);
+  }
+}
+
+async function load(){
+  try{
+    const res = await api({ action:'list' });
+    if(res.ok){
+      tickets = res.tickets;
+      render();
+    }
+  }catch(err){
+    document.getElementById('liveLabel').textContent = 'เชื่อมต่อไม่ได้';
+  }
+}
+
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(load, POLL_MS);
+}
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+
+// หยุด poll ตอนสลับแท็บ ประหยัดโควตา
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden) stopPolling();
+  else if(sessionStorage.getItem('adminUnlocked') === '1'){ load(); startPolling(); }
+});
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+
+// ===== PIN gate =====
+function unlock(){
+  document.getElementById('gate').classList.add('hidden');
+  sessionStorage.setItem('adminUnlocked', '1');
+  load();
+  startPolling();
+}
+
+function tryPin(){
+  const val = document.getElementById('pinInput').value.trim();
+  const err = document.getElementById('pinErr');
+  if(val === ADMIN_PIN){
+    err.textContent = '';
+    unlock();
+  } else {
+    err.textContent = 'รหัสไม่ถูกต้อง';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+
+document.getElementById('pinBtn').addEventListener('click', tryPin);
+document.getElementById('pinInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter') tryPin();
+});
+
+// ปลดล็อกไว้แล้วใน session นี้ -> ข้าม PIN
+if(sessionStorage.getItem('adminUnlocked') === '1'){
+  unlock();
+} else {
+  document.getElementById('pinInput').focus();
+}
+</script>
+</body>
+</html>
