@@ -49,6 +49,7 @@
   .stub .head{background:var(--accent);color:#fff;padding:22px 18px 26px;}
   .stub .head .label{font-size:12px;letter-spacing:.08em;opacity:.85;text-transform:uppercase;}
   .stub .head .num{font-size:44px;font-weight:800;margin-top:4px;}
+  .stub .head .pos{font-size:13px;opacity:.85;margin-top:4px;min-height:16px;}
   .perforation{height:0;border-top:2px dashed var(--line);position:relative;margin:0 18px;}
   .perforation::before,.perforation::after{
     content:"";position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--bg);
@@ -65,6 +66,17 @@
   }
   button.copy.copied{background:#fff;color:var(--accent);}
   .hint2{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:10px;line-height:1.5;}
+  .status-box{
+    margin-top:14px;padding:12px;border-radius:9px;background:var(--bg);
+    font-size:14px;text-align:center;display:none;
+  }
+  .status-box.show{display:block;}
+  .status-box .big{font-size:20px;font-weight:800;color:var(--accent);margin-bottom:2px;}
+  button.check{
+    width:100%;margin-top:10px;padding:11px;border:1.5px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink-soft);font-size:13.5px;font-weight:600;cursor:pointer;
+  }
+  button.check:disabled{opacity:.6;}
   .hidden{display:none;}
 </style>
 </head>
@@ -107,6 +119,7 @@
       <div class="head">
         <div class="label">คิวของคุณ</div>
         <div class="num" id="ticketCode">-</div>
+        <div class="pos" id="queuePosition">กำลังเช็คคิว...</div>
       </div>
       <div class="perforation"></div>
       <div class="body">
@@ -116,6 +129,8 @@
       <div class="footer">
         <button class="copy" id="copyBtn">คัดลอกข้อมูลคิว</button>
         <p class="hint2">กดปุ่มด้านบนแล้วนำไปวางในแชท LINE นี้ได้เลย<br>เจ้าหน้าที่จะติดต่อกลับตามลำดับคิว</p>
+        <div id="statusBox" class="status-box"></div>
+        <button class="check" id="checkBtn">เช็คสถานะคิวตอนนี้</button>
       </div>
     </div>
   </div>
@@ -179,6 +194,33 @@ function validate(){
 
 let lastPayload = null;
 
+async function fetchQueueStatus_(ticketCode){
+  const res = await fetch(`${APPS_SCRIPT_URL}?ticketCode=${encodeURIComponent(ticketCode)}`);
+  return res.json();
+}
+
+function renderPosition_(data){
+  const el = document.getElementById('queuePosition');
+  if(!data.found){
+    el.textContent = '';
+  } else if(data.status === 'เสร็จแล้ว'){
+    el.textContent = '(ดำเนินการเสร็จแล้ว)';
+  } else {
+    el.textContent = `(คิวที่ ${data.ahead + 1} ที่รอดำเนินการ)`;
+  }
+}
+
+async function updateQueuePosition_(ticketCode){
+  try{
+    const data = await fetchQueueStatus_(ticketCode);
+    renderPosition_(data);
+    return data;
+  }catch(err){
+    document.getElementById('queuePosition').textContent = '';
+    return null;
+  }
+}
+
 document.getElementById('submitBtn').addEventListener('click', async () => {
   if(!validate()) return;
   const btn = document.getElementById('submitBtn');
@@ -206,6 +248,8 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
     toggle('formView', false);
     toggle('successView', true);
+
+    updateQueuePosition_(data.ticketCode); // เช็คคิวปัจจุบันอัตโนมัติทันที
   }catch(err){
     btn.disabled = false; btn.textContent = 'ส่งเรื่องและรับคิว';
     alert('ส่งไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
@@ -237,6 +281,34 @@ document.getElementById('copyBtn').addEventListener('click', async () => {
     btn.textContent = 'คัดลอกข้อมูลคิว';
     btn.classList.remove('copied');
   }, 2500);
+});
+
+document.getElementById('checkBtn').addEventListener('click', async () => {
+  if(!lastPayload) return;
+  const btn = document.getElementById('checkBtn');
+  const box = document.getElementById('statusBox');
+  btn.disabled = true; btn.textContent = 'กำลังเช็ค...';
+
+  try{
+    const data = await fetchQueueStatus_(lastPayload.ticketCode);
+    renderPosition_(data);
+
+    if(!data.found){
+      box.innerHTML = 'ไม่พบข้อมูลคิว กรุณาลองใหม่';
+    } else if(data.status === 'เสร็จแล้ว'){
+      box.innerHTML = '<div class="big">ดำเนินการเสร็จแล้ว</div>ขอบคุณที่ใช้บริการค่ะ';
+    } else if(data.ahead === 0){
+      box.innerHTML = '<div class="big">ถึงคิวคุณแล้ว!</div>เจ้าหน้าที่กำลังติดต่อกลับ';
+    } else {
+      box.innerHTML = `<div class="big">เหลืออีก ${data.ahead} คิว</div>ก่อนถึงคิวของคุณ`;
+    }
+    box.classList.add('show');
+  }catch(err){
+    box.innerHTML = 'เช็คสถานะไม่สำเร็จ กรุณาลองใหม่';
+    box.classList.add('show');
+  }
+
+  btn.disabled = false; btn.textContent = 'เช็คสถานะคิวตอนนี้';
 });
 </script>
 </body>
