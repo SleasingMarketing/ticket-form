@@ -82,8 +82,10 @@
     display:flex;align-items:center;gap:16px;transition:background .3s ease;
   }
   .row.doing .qhead{background:var(--accent-deep);}
+  .row.waitinfo .qhead{background:#B8860B;}
+  .row.done .qhead{background:#6B7482;}
   .row .qhead .avatar{
-    width:44px;height:44px;border-radius:50%;flex-shrink:0;
+    width:40px;height:40px;border-radius:50%;flex-shrink:0;
     border:2px solid rgba(255,255,255,.5);overflow:hidden;
     display:flex;align-items:center;justify-content:center;
     background:rgba(255,255,255,.12);
@@ -109,17 +111,34 @@
     font-family:inherit;white-space:nowrap;
   }
   .row .actions button:active{transform:scale(.95);}
-  .btn-doing{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .row.doing .btn-doing{background:#fff;color:var(--accent);border-color:var(--accent);}
-  .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
-  .btn-done:hover{background:var(--danger-deep);}
-  .row.doing .btn-done{background:var(--danger);color:#fff;}
-  .row:not(.doing) .btn-done{background:#fff;color:var(--ink-soft);border-color:var(--line);}
-  .row:not(.doing) .btn-done:hover{background:var(--danger);color:#fff;border-color:var(--danger);}
+  /* ===== 3 ปุ่มสถานะ ===== */
+  .row .actions button{
+    border-radius:9px;padding:11px 16px;font-size:13.5px;font-weight:700;
+    cursor:pointer;border:1.5px solid var(--line);transition:all .16s ease;
+    font-family:inherit;white-space:nowrap;background:#fff;color:var(--ink-soft);
+  }
+  .row .actions button:active{transform:scale(.95);}
+  .row .actions button:disabled{cursor:default;}
+  /* ปุ่ม active ตามสถานะ */
+  .row.doing    .btn-wait{background:var(--accent);color:#fff;border-color:var(--accent);}      /* กำลังทำ */
+  .row.waitinfo .btn-doing{background:var(--accent);color:#fff;border-color:var(--accent);}     /* รอข้อมูลเพิ่ม */
+  .row.done     .btn-done{background:#fff;color:var(--danger);border-color:var(--danger);}       /* เสร็จแล้ว */
+  /* ปุ่มเสร็จสิ้นตอนกำลังทำ/รอข้อมูล = แดงเต็ม (เจ้าของกดได้) */
+  .row.doing .btn-done, .row.waitinfo .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .row.doing .btn-done:hover, .row.waitinfo .btn-done:hover{background:var(--danger-deep);}
+  /* สถานะ done: ปุ่ม 1-2 จางเทา */
+  .row.done .btn-wait, .row.done .btn-doing{opacity:.5;}
+  /* spinner ตอนกำลังรับเคส */
+  .btn-loading{position:relative;color:transparent!important;}
+  .btn-loading::after{
+    content:"";position:absolute;top:50%;left:50%;width:14px;height:14px;
+    margin:-7px 0 0 -7px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;
+    border-radius:50%;animation:spin .6s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
 
   /* สถานะเสร็จแล้ว: การ์ดจางลง หัวเป็นสีเทา ป้ายเสร็จสิ้น */
   .row.done{opacity:.72;}
-  .row.done .qhead{background:#6B7482;}
   .done-badge{
     display:inline-flex;align-items:center;gap:6px;
     background:#E7F1EE;color:var(--accent);font-weight:700;font-size:14px;
@@ -173,6 +192,15 @@
     .search-box input{width:140px;}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+
+  /* popup เคสถูกแย่ง */
+  .taken-overlay{position:fixed;inset:0;background:rgba(26,35,51,.5);z-index:110;display:none;align-items:center;justify-content:center;padding:24px;}
+  .taken-overlay.show{display:flex;}
+  .taken-card{background:#fff;border-radius:16px;padding:28px 26px;max-width:340px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.2);}
+  .taken-icon{width:52px;height:52px;border-radius:50%;background:#FCEBE8;color:var(--danger);font-size:28px;font-weight:800;line-height:52px;margin:0 auto 14px;}
+  .taken-card h3{font-size:18px;margin:0 0 8px;color:var(--ink);}
+  .taken-card p{font-size:14px;color:var(--ink-soft);margin:0 0 20px;line-height:1.5;}
+  .taken-card button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
 </style>
 </head>
 <body>
@@ -201,9 +229,10 @@
     <div class="live" id="live"><span class="dot"></span><span id="liveLabel">อัปเดตอัตโนมัติ</span></div>
     <select class="filter-sel" id="filterSel">
       <option value="all">สถานะทั้งหมด</option>
-      <option value="รอคิว">ยังไม่ดำเนินการ</option>
-      <option value="กำลังดำเนินการ">ดำเนินการอยู่</option>
-      <option value="เสร็จแล้ว">ดำเนินการแล้ว</option>
+      <option value="งานใหม่">งานใหม่</option>
+      <option value="กำลังทำ">กำลังทำ</option>
+      <option value="รอข้อมูลเพิ่ม">รอข้อมูลเพิ่ม</option>
+      <option value="เสร็จแล้ว">เสร็จสิ้น</option>
     </select>
     <select class="filter-sel" id="ownerSel">
       <option value="all">ทุกบัญชี</option>
@@ -224,7 +253,7 @@
 <script>
 // ===== ตั้งค่าตรงนี้ =====
 // URL ของ backend แอดมิน (Code-admin.gs) — คนละตัวกับ ticket-form ของลูกค้า
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvjmsN19ZHE5qoKOnOfa_2PyusdU9tmYJFX4oiDnj7a1WX3gZ6_wiy55lmTXM70yrB/exec";
+const APPS_SCRIPT_URL = "YOUR_ADMIN_APPS_SCRIPT_WEB_APP_URL";
 // =========================
 
 const API_URL = APPS_SCRIPT_URL;
@@ -356,24 +385,32 @@ function buildRow(t){
 }
 
 function rowStatusClass(status){
-  if(status === 'กำลังดำเนินการ') return ' doing';
+  if(status === 'กำลังทำ') return ' doing';
+  if(status === 'รอข้อมูลเพิ่ม') return ' waitinfo';
   if(status === 'เสร็จแล้ว') return ' done';
-  return '';
+  return ' new'; // งานใหม่
 }
 
-// ปุ่มตามสถานะ: เสร็จแล้ว = โชว์ป้าย "เสร็จสิ้น" แทนปุ่ม
+// 3 ปุ่ม -> map สถานะ:
+//   "รอดำเนินการ" = กำลังทำ (รับเจ้าของ)
+//   "อยู่ระหว่างดำเนินการ" = รอข้อมูลเพิ่ม
+//   "เสร็จสิ้น" = เสร็จแล้ว
+// เคสที่มีเจ้าของเป็นคนอื่น -> ปุ่ม disable
 function actionsHtml(t){
-  if(t.status === 'เสร็จแล้ว'){
-    return '<span class="done-badge">✓ ดำเนินการเสร็จสิ้น</span>';
-  }
-  const doingLabel = t.status === 'กำลังดำเนินการ' ? 'ดำเนินการอยู่' : 'ยังไม่ดำเนินการ';
-  return `<button class="btn-doing">${doingLabel}</button><button class="btn-done">ดำเนินการแล้ว</button>`;
+  const mine = !t.ownerUser || (me && t.ownerUser === me.username);
+  const dis = mine ? '' : 'disabled title="เคสนี้มีเจ้าของแล้ว"';
+  return `
+    <button class="btn-wait" ${dis}>รอดำเนินการ</button>
+    <button class="btn-doing" ${dis}>อยู่ระหว่างดำเนินการ</button>
+    <button class="btn-done" ${dis}>เสร็จสิ้น</button>`;
 }
 
 function bindRowActions(row, t){
+  const bw = row.querySelector('.btn-wait');
   const bd = row.querySelector('.btn-doing');
   const dn = row.querySelector('.btn-done');
-  if(bd) bd.addEventListener('click', () => setStatus(t.ticketCode, 'กำลังดำเนินการ'));
+  if(bw) bw.addEventListener('click', () => setStatus(t.ticketCode, 'กำลังทำ'));
+  if(bd) bd.addEventListener('click', () => setStatus(t.ticketCode, 'รอข้อมูลเพิ่ม'));
   if(dn) dn.addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
 }
 
@@ -406,22 +443,91 @@ function updateRow(row, t){
   }
 }
 
+// หาคิวใน tickets ตาม code
+function findTicket(code){ return tickets.find(t => t.ticketCode === code); }
+
 async function setStatus(ticketCode, status){
   if(busy.has(ticketCode)) return;
+  const t = findTicket(ticketCode);
+  if(!t) return;
+
+  const isClaim = (status === 'กำลังทำ' && !t.ownerUser); // การกดที่แย่งเจ้าของ (ปุ่มรอดำเนินการ)
   busy.add(ticketCode);
+
+  const row = document.querySelector(`.row[data-code="${cssEscape(ticketCode)}"]`);
+
+  // ===== Optimistic: อัปเดตหน้าจอทันที =====
+  const prev = { status: t.status, ownerUser: t.ownerUser, ownerName: t.ownerName, ownerAvatar: t.ownerAvatar };
+  t.status = status;
+  if(isClaim && me){ t.ownerUser = me.username; t.ownerName = me.displayName; t.ownerAvatar = me.avatarUrl || ''; }
+  if(row) updateRow(row, t);
+
+  // ถ้าเป็นการรับเคส -> โชว์ spinner ที่ปุ่มรอดำเนินการระหว่างรอ backend ยืนยัน (กันขึ้นชื่อผิด)
+  if(isClaim && row){
+    const b = row.querySelector('.btn-wait');
+    if(b){ b.classList.add('btn-loading'); b.disabled = true; }
+  }
 
   try{
     const res = await api({ action:'setStatus', ticketCode, status, username: (me && me.username) || '' });
-    if(!res.ok){ showToast(res.message || 'อัปเดตไม่สำเร็จ'); }
-    else if(status === 'กำลังดำเนินการ'){ showToast(`${ticketCode} กำลังดำเนินการ`); }
-    else if(status === 'เสร็จแล้ว'){ showToast(`${ticketCode} เสร็จสิ้น`); }
-    await load();
+
+    if(res.taken){
+      // ถูกคนอื่นแย่งไปแล้ว -> rollback + popup
+      t.status = 'กำลังทำ';
+      t.ownerUser = res.ownerUser; t.ownerName = res.ownerName; t.ownerAvatar = res.ownerAvatar;
+      if(row) updateRow(row, t);
+      showTakenPopup(res.ownerName || 'แอดมินคนอื่น');
+    } else if(!res.ok){
+      // ล้มเหลวอื่นๆ -> rollback
+      Object.assign(t, prev);
+      if(row) updateRow(row, t);
+      showToast(res.message || 'อัปเดตไม่สำเร็จ');
+    } else {
+      // สำเร็จ -> ยืนยันเจ้าของจริงจาก backend
+      if(res.ownerUser !== undefined){ t.ownerUser = res.ownerUser; t.ownerName = res.ownerName; t.ownerAvatar = res.ownerAvatar; }
+      if(row) updateRow(row, t);
+    }
+    // sync เงียบๆ เบื้องหลัง ไม่บล็อก UI
+    loadSilent();
   }catch(err){
+    Object.assign(t, prev);
+    if(row) updateRow(row, t);
     showToast('เชื่อมต่อไม่สำเร็จ');
-    await load();
   }finally{
     busy.delete(ticketCode);
+    if(row){
+      const b = row.querySelector('.btn-wait');
+      if(b){ b.classList.remove('btn-loading'); b.disabled = false; }
+    }
   }
+}
+
+// popup แจ้งว่าเคสถูกคนอื่นรับไปแล้ว
+function showTakenPopup(ownerName){
+  let el = document.getElementById('takenPopup');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'takenPopup';
+    el.className = 'taken-overlay';
+    el.innerHTML = `<div class="taken-card">
+      <div class="taken-icon">!</div>
+      <h3>เคสนี้ถูกรับไปแล้ว</h3>
+      <p id="takenMsg"></p>
+      <button id="takenClose">รับทราบ</button>
+    </div>`;
+    document.body.appendChild(el);
+    el.querySelector('#takenClose').addEventListener('click', () => el.classList.remove('show'));
+  }
+  el.querySelector('#takenMsg').textContent = `คุณ ${ownerName} รับเคสนี้ไปก่อนแล้ว`;
+  el.classList.add('show');
+}
+
+// โหลดลิสต์แบบเงียบ (ไม่โชว์ error UI) ใช้ sync หลัง optimistic
+async function loadSilent(){
+  try{
+    const res = await api({ action:'list' });
+    if(res.ok){ tickets = res.tickets; setLive(true); render(); }
+  }catch(err){ /* เงียบ */ }
 }
 
 async function load(){
