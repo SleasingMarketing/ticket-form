@@ -23,9 +23,7 @@
   .top-banner{display:block;margin:-22px -18px 18px;border-radius:14px 14px 0 0;overflow:hidden;}
   .top-banner img{width:100%;height:auto;display:block;}
   .top-banner:empty,.top-banner img[src=""]{display:none;}
-  .promo-box{display:block;margin:20px 0 4px;border-radius:12px;overflow:hidden;border:1px solid var(--line);}
-  .promo-box img{width:100%;height:auto;display:block;}
-  h1{font-size:26px;margin:0 0 4px;}
+  h1{font-size:19px;margin:0 0 4px;}
   .desc{font-size:13px;color:var(--ink-soft);margin:0 0 20px;line-height:1.5;}
   label{display:block;font-size:13px;font-weight:600;margin:16px 0 6px;}
   input[type=text],input[type=tel]{
@@ -117,17 +115,17 @@
 
   <div id="formView">
     <div class="card">
-      <a id="topBannerLink" href="https://www.facebook.com/SrisawadSshop" target="_blank" rel="noopener" class="top-banner">
-        <img id="topBanner" alt="โปรโมชั่น" src="https://drive.google.com/thumbnail?id=17m-X32Jz6B5zbdl1F4c35qxsBWBSVaZM&sz=w1000">
+      <a id="topBannerLink" href="https://www.facebook.com/SrisawadSshop" target="_blank" rel="noopener" class="top-banner" style="display:none;">
+        <img id="topBanner" alt="โปรโมชั่น" src="" decoding="async">
       </a>
       <h1>แบบฟอร์มแจ้งปัญหา</h1>
       <p class="desc">กรุณากรอกข้อมูลให้ครบถ้วน เจ้าหน้าที่จะติดต่อกลับตามลำดับคิวที่ลงทะเบียน</p>
 
-      <label for="fullname">ชื่อ - นามสกุล*</label>
+      <label for="fullname">ชื่อ - นามสกุล</label>
       <input type="text" id="fullname" placeholder="เช่น สมชาย ใจดี">
       <div class="err" id="err-fullname">กรุณากรอกชื่อ-นามสกุล</div>
 
-      <label for="idcard">เลขบัตรประชาชน*</label>
+      <label for="idcard">เลขบัตรประชาชน</label>
       <input type="tel" id="idcard" maxlength="13" placeholder="เลข 13 หลัก">
       <div class="err" id="err-idcard">กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก</div>
 
@@ -135,23 +133,19 @@
       <input type="tel" id="contractno" maxlength="15" placeholder="เลข 15 หลัก">
       <div class="err" id="err-contractno">เลขที่สัญญาต้องมี 15 หลัก</div>
 
-      <label>อัปโหลดรูปหน้าล็อก*</label>
+      <label>อัปโหลดรูปหน้าล็อก</label>
       <div class="upload-box" id="box-lock">
         <span class="hint">แตะเพื่อเลือกรูป</span>
         <input type="file" accept="image/*" id="file-lock">
       </div>
       <div class="err" id="err-lock">กรุณาแนบรูปหน้าล็อก</div>
 
-      <label>อัปโหลดรูปสลิปชำระเงิน*</label>
+      <label>อัปโหลดรูปสลิปชำระเงิน</label>
       <div class="upload-box" id="box-slip">
         <span class="hint">แตะเพื่อเลือกรูป</span>
         <input type="file" accept="image/*" id="file-slip">
       </div>
       <div class="err" id="err-slip">กรุณาแนบรูปสลิปชำระเงิน</div>
-
-      <a id="promoLink" href="https://www.facebook.com/SrisawadSshop" target="_blank" rel="noopener" class="promo-box" style="display:none;">
-        <img id="promoImage" alt="โปรโมชั่น" src="">
-      </a>
 
       <button class="submit" id="submitBtn">ส่งเรื่องและรับคิว</button>
     </div>
@@ -194,26 +188,41 @@
 
 <script>
 // ===== ตั้งค่าตรงนี้ =====
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgobwjjz751jjq9KGNExNlD7TqE5SZqM0mqOSaG0JUs1OkBHs7rXv9WldV_2OwKYmi/exec"; // ลิงก์จาก Deploy > Web app
+const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // ลิงก์จาก Deploy > Web app
 // =========================
 
 function toggle(id, show){ document.getElementById(id).classList.toggle('hidden', !show); }
 
-// โหลดรูปโปรโมทสุ่มจาก Drive folder มาแสดงด้านล่างฟอร์ม
-async function loadPromoImage(){
-  try{
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=promoImages`);
-    const data = await res.json();
-    if(data.ok && data.images && data.images.length){
-      const pick = data.images[Math.floor(Math.random() * data.images.length)];
-      const img = document.getElementById('promoImage');
-      const link = document.getElementById('promoLink');
-      img.onload = () => { link.style.display = 'block'; };
-      img.src = pick;
-    }
-  }catch(err){ /* โหลดรูปไม่ได้ ไม่เป็นไร ฟอร์มยังใช้ได้ */ }
+// โหลดแบนเนอร์หัวฟอร์มจากช่อง O2 ของชีต (cache ไว้ เปิดซ้ำเร็วขึ้น)
+function showBanner(url){
+  if(!url) return;
+  const img = document.getElementById('topBanner');
+  const link = document.getElementById('topBannerLink');
+  img.onload = () => { link.style.display = 'block'; };
+  img.src = url;
 }
-loadPromoImage();
+
+async function loadBanner(){
+  // 1) มี cache -> แสดงทันที
+  try{
+    const cached = sessionStorage.getItem('bannerUrl');
+    if(cached) showBanner(cached);
+  }catch(e){}
+
+  // 2) fetch ล่าสุดเบื้องหลัง
+  try{
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=banner`);
+    const data = await res.json();
+    if(data.ok && data.banner){
+      try{ sessionStorage.setItem('bannerUrl', data.banner); }catch(e){}
+      const link = document.getElementById('topBannerLink');
+      if(link.style.display === 'none' || !link.style.display){
+        showBanner(data.banner);
+      }
+    }
+  }catch(err){ /* โหลดแบนเนอร์ไม่ได้ ไม่เป็นไร ฟอร์มยังใช้ได้ */ }
+}
+loadBanner();
 
 function resizeImage(file, maxW = 1000, quality = 0.7){
   return new Promise((resolve, reject) => {
