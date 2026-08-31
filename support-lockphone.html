@@ -334,7 +334,7 @@ function render(){
   const list = document.getElementById('list');
   const items = visibleTickets();
 
-  document.getElementById('countPill').textContent = `${tickets.length} คิว`;
+  document.getElementById('countPill').textContent = `${items.length} รายการ`;
   refreshOwnerOptions();
 
   if(items.length === 0){
