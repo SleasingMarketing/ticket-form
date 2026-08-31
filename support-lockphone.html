@@ -78,35 +78,40 @@
   @keyframes rowIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 
   .row .qhead{
-    background:var(--accent);color:#fff;padding:10px 20px;min-width:220px;
-    display:flex;align-items:center;gap:16px;transition:background .3s ease;
+    background:var(--accent);color:#fff;padding:6px 16px;min-width:170px;
+    display:flex;align-items:center;gap:12px;transition:background .3s ease;
   }
   .row.doing .qhead{background:var(--accent-deep);}
   .row.waitinfo .qhead{background:#B8860B;}
   .row.done .qhead{background:#6B7482;}
   .row .qhead .avatar{
-    width:40px;height:40px;border-radius:50%;flex-shrink:0;
+    width:30px;height:30px;border-radius:50%;flex-shrink:0;
     border:2px solid rgba(255,255,255,.5);overflow:hidden;
     display:flex;align-items:center;justify-content:center;
     background:rgba(255,255,255,.12);
   }
   .row .qhead .avatar img{width:100%;height:100%;object-fit:cover;}
-  .row .qhead .qmeta .qlabel{font-size:11.5px;opacity:.82;}
-  .row .qhead .qmeta .qcode{font-size:26px;font-weight:800;letter-spacing:.02em;line-height:1.15;}
+  .row .qhead .qmeta .qlabel{font-size:10px;opacity:.82;}
+  .row .qhead .qmeta .qcode{font-size:19px;font-weight:800;letter-spacing:.02em;line-height:1.15;}
 
   .row .fields{
-    flex:1;display:flex;align-items:center;gap:8px;padding:0 8px;
-    min-width:0;overflow-x:auto;
+    flex:1;display:flex;align-items:center;padding:0;
+    min-width:0;
   }
-  .row .field{padding:10px 20px;border-left:1px solid var(--line);min-width:150px;}
+  /* ช่องข้อมูลกว้างเท่ากันทุกแถว (flex-basis คงที่ ไม่ยืดตามข้อความ) */
+  .row .field{
+    padding:6px 18px;border-left:1px solid var(--line);
+    flex:0 0 220px;width:220px;overflow:hidden;
+  }
+  .row .field.field-name{flex-basis:200px;width:200px;}
   .row .field:first-child{border-left:none;}
-  .row .field .k{font-size:11.5px;color:var(--ink-soft);margin-bottom:3px;}
-  .row .field .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .row .field .v.name-v{font-size:17px;}
+  .row .field .k{font-size:10.5px;color:var(--ink-soft);margin-bottom:1px;}
+  .row .field .v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row .field .v.name-v{font-size:15px;}
 
-  .row .actions{display:flex;align-items:center;gap:10px;padding:10px 20px;flex-shrink:0;}
+  .row .actions{display:flex;align-items:center;gap:8px;padding:6px 16px;flex-shrink:0;}
   .row .actions button{
-    border-radius:9px;padding:11px 18px;font-size:14px;font-weight:700;
+    border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;
     cursor:pointer;border:1.5px solid transparent;transition:all .18s ease;
     font-family:inherit;white-space:nowrap;
   }
@@ -119,13 +124,18 @@
   }
   .row .actions button:active{transform:scale(.95);}
   .row .actions button:disabled{cursor:default;}
-  /* ปุ่ม active ตามสถานะ */
-  .row.doing    .btn-wait{background:var(--accent);color:#fff;border-color:var(--accent);}      /* กำลังทำ */
-  .row.waitinfo .btn-doing{background:var(--accent);color:#fff;border-color:var(--accent);}     /* รอข้อมูลเพิ่ม */
-  .row.done     .btn-done{background:#fff;color:var(--danger);border-color:var(--danger);}       /* เสร็จแล้ว */
-  /* ปุ่มเสร็จสิ้นตอนกำลังทำ/รอข้อมูล = แดงเต็ม (เจ้าของกดได้) */
-  .row.doing .btn-done, .row.waitinfo .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
-  .row.doing .btn-done:hover, .row.waitinfo .btn-done:hover{background:var(--danger-deep);}
+  /* สี = highlight ปุ่ม action ถัดไปที่ควรกด (ไม่ใช่สถานะปัจจุบัน) */
+  /* งานใหม่ -> ควรกด "รอดำเนินการ" (เขียว) */
+  .row.new .btn-wait{background:var(--accent);color:#fff;border-color:var(--accent);}
+  /* กำลังทำ -> ควรกด "อยู่ระหว่างดำเนินการ" (เขียว) หรือ "เสร็จสิ้น" (แดง) */
+  .row.doing .btn-doing{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .row.doing .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .row.doing .btn-done:hover{background:var(--danger-deep);}
+  /* รอข้อมูลเพิ่ม -> ควรกด "เสร็จสิ้น" (แดง) */
+  .row.waitinfo .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .row.waitinfo .btn-done:hover{background:var(--danger-deep);}
+  /* เสร็จแล้ว -> "เสร็จสิ้น" ขาวขอบแดง (จบแล้ว) */
+  .row.done .btn-done{background:#fff;color:var(--danger);border-color:var(--danger);}
   /* สถานะ done: ปุ่ม 1-2 จางเทา */
   .row.done .btn-wait, .row.done .btn-doing{opacity:.5;}
   /* spinner ตอนกำลังรับเคส */
@@ -375,7 +385,7 @@ function buildRow(t){
       </div>
     </div>
     <div class="fields">
-      <div class="field"><div class="k">ชื่อลงทะเบียน</div><div class="v name-v">${escapeHtml(t.fullname)}</div></div>
+      <div class="field field-name"><div class="k">ชื่อลงทะเบียน</div><div class="v name-v">${escapeHtml(t.fullname)}</div></div>
       <div class="field"><div class="k">เลขบัตรประชาชน</div><div class="v">${escapeHtml(t.idcard)}</div></div>
       ${t.contractno ? `<div class="field"><div class="k">เลขที่สัญญา</div><div class="v">${escapeHtml(t.contractno)}</div></div>` : ''}
     </div>
