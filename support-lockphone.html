@@ -378,7 +378,7 @@ function buildRow(t){
   const avatar = ownerAvatarHtml(t);
   row.innerHTML = `
     <div class="qhead">
-      <div class="avatar" title="${t.ownerName ? 'เจ้าของ: ' + escapeHtml(t.ownerName) : 'ยังไม่มีเจ้าของ'}">${avatar}</div>
+      <div class="avatar" title="${ownerInfo(t).name ? 'เจ้าของ: ' + escapeHtml(ownerInfo(t).name) : 'ยังไม่มีเจ้าของ'}">${avatar}</div>
       <div class="qmeta">
         <div class="qlabel">รหัสคิวลูกค้า</div>
         <div class="qcode">${escapeHtml(t.ticketCode)}</div>
@@ -424,13 +424,24 @@ function bindRowActions(row, t){
   if(dn) dn.addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
 }
 
+// หาข้อมูลเจ้าของ (ชื่อ+รูป) จาก allAdmins ด้วย username — ไม่ต้องเก็บซ้ำในทุกเคส
+function ownerInfo(t){
+  const u = String(t.ownerUser || '').trim().toLowerCase();
+  if(!u) return { name: '', avatar: '' };
+  const a = allAdmins.find(x => x.username === u);
+  if(a) return { name: a.displayName || u, avatar: a.avatarUrl || '' };
+  // เผื่อ allAdmins ยังไม่โหลด -> ใช้ค่าที่ backend ส่งมาเป็น fallback
+  return { name: t.ownerName || u, avatar: t.ownerAvatar || '' };
+}
+
 // รูป avatar เจ้าของเคส: มีรูป -> โชว์รูป, มีชื่อแต่ไม่มีรูป -> ตัวอักษรแรก, ไม่มีเจ้าของ -> วงว่าง
 function ownerAvatarHtml(t){
-  if(t.ownerAvatar){
-    return `<img src="${escapeHtml(t.ownerAvatar)}" alt="" onerror="this.parentNode.textContent='${t.ownerName ? escapeHtml(t.ownerName.charAt(0)) : ''}'">`;
+  const info = ownerInfo(t);
+  if(info.avatar){
+    return `<img src="${escapeHtml(info.avatar)}" alt="" onerror="this.parentNode.textContent='${info.name ? escapeHtml(info.name.charAt(0)) : ''}'">`;
   }
-  if(t.ownerName){
-    return `<span style="font-size:22px;font-weight:700;">${escapeHtml(t.ownerName.charAt(0))}</span>`;
+  if(info.name){
+    return `<span style="font-size:15px;font-weight:700;">${escapeHtml(info.name.charAt(0))}</span>`;
   }
   return ''; // ยังไม่มีเจ้าของ = วงว่าง
 }
@@ -449,7 +460,7 @@ function updateRow(row, t){
   const av = row.querySelector('.qhead .avatar');
   if(av){
     av.innerHTML = ownerAvatarHtml(t);
-    av.title = t.ownerName ? 'เจ้าของ: ' + t.ownerName : 'ยังไม่มีเจ้าของ';
+    av.title = ownerInfo(t).name ? 'เจ้าของ: ' + ownerInfo(t).name : 'ยังไม่มีเจ้าของ';
   }
 }
 
