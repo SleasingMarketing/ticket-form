@@ -53,11 +53,12 @@
     border:1px solid var(--line);border-radius:9px;padding:8px 12px;
     font-size:14px;font-family:inherit;background:var(--card);color:var(--ink);cursor:pointer;
   }
-  button.btn-refresh{
+  .btn-refresh{
     border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
     border-radius:9px;padding:8px 14px;font-size:13.5px;cursor:pointer;font-weight:700;font-family:inherit;
+    display:inline-block;line-height:normal;
   }
-  button.btn-refresh:active{transform:scale(.96);}
+  .btn-refresh:active{transform:scale(.96);}
   button.btn-logout{
     border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
     border-radius:9px;padding:8px 12px;font-size:13.5px;cursor:pointer;font-family:inherit;
@@ -226,6 +227,8 @@
   .d-row .dk{color:var(--ink-soft);}
   .d-row .dv{font-weight:700;font-variant-numeric:tabular-nums;}
   .d-images{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;}
+  .d-images a:nth-child(3){grid-column:1/-1;}
+  .d-images a:nth-child(3) img{max-height:400px;object-fit:contain;background:var(--bg);}
   .d-images a{display:block;border-radius:12px;overflow:hidden;border:1px solid var(--line);}
   .d-images img{width:100%;height:auto;display:block;}
   .d-images .no-img{grid-column:1/-1;text-align:center;color:var(--ink-soft);padding:30px;font-size:14px;}
@@ -284,7 +287,7 @@
       <span class="icon">🔍</span>
     </div>
     <button class="btn-refresh" id="refreshBtn">รีเฟรช</button>
-    <a href="./insight.html" class="btn-logout" style="text-decoration:none;">วิเคราะห์</a>
+    <a href="./insight.html" class="btn-refresh" style="text-decoration:none;">วิเคราะห์</a>
   </div>
 </header>
 
@@ -628,12 +631,13 @@ function showDetailPopup(ticketCode){
   if(t.contractno){ el.querySelector('#dContract').textContent = t.contractno; cRow.style.display = ''; }
   else cRow.style.display = 'none';
 
-  // รูป 2 รูป (หน้าล็อก + สลิป)
+  // รูปแนบ (หน้าล็อก + สลิป + สลิปเพิ่มเติม)
   const imgs = el.querySelector('#dImages');
-  const lock = driveImg(t.lockUrl), slip = driveImg(t.slipUrl);
+  const lock = driveImg(t.lockUrl), slip = driveImg(t.slipUrl), slip2 = driveImg(t.slipUrl2);
   let h = '';
   if(lock) h += `<a href="${escapeHtml(t.lockUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(lock)}" alt="รูปหน้าล็อก"></a>`;
   if(slip) h += `<a href="${escapeHtml(t.slipUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(slip)}" alt="รูปสลิป"></a>`;
+  if(slip2) h += `<a href="${escapeHtml(t.slipUrl2)}" target="_blank" rel="noopener"><img src="${escapeHtml(slip2)}" alt="รูปสลิปเพิ่มเติม"></a>`;
   imgs.innerHTML = h || '<div class="no-img">ไม่มีรูปแนบ</div>';
 
   el.classList.add('show');
