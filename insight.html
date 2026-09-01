@@ -136,6 +136,7 @@
       <div class="chart" id="chart"></div>
       <div class="legend">
         <span><span class="dot" style="background:var(--accent)"></span>เคสเข้าใหม่</span>
+        <span><span class="dot" style="background:var(--gold)"></span>รับเคส</span>
         <span><span class="dot" style="background:var(--danger)"></span>ปิดเคส</span>
       </div>
     </div>
@@ -186,19 +187,18 @@ function renderInsight(d){
   renderRanking(d.ranking);
 }
 
-// กราฟแท่งคู่ (เคสเข้า vs ปิด) วาดด้วย SVG
+// กราฟแท่ง 3 ชุด (เคสเข้า / รับเคส / ปิดเคส) วาดด้วย SVG
 function renderChart(timeline){
   const chart = document.getElementById('chart');
   if(!timeline || !timeline.length){ chart.innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>'; return; }
 
-  const w = Math.max(timeline.length * 64, 600), h = 240, pad = 30, padB = 40;
-  const maxV = Math.max(1, ...timeline.map(t => Math.max(t.newCases, t.doneCases)));
-  const bw = 14, gap = 4;
+  const w = Math.max(timeline.length * 78, 600), h = 240, pad = 30, padB = 40;
+  const maxV = Math.max(1, ...timeline.map(t => Math.max(t.newCases, t.claimedCases||0, t.doneCases)));
+  const bw = 12, gap = 3;
   const stepX = (w - pad*2) / timeline.length;
   const scaleY = (h - pad - padB) / maxV;
 
   let bars = '', labels = '', grid = '';
-  // เส้น grid แนวนอน 4 เส้น
   for(let g=0; g<=4; g++){
     const val = Math.round(maxV/4*g);
     const y = h - padB - val*scaleY;
@@ -207,10 +207,13 @@ function renderChart(timeline){
   }
   timeline.forEach((t, i) => {
     const cx = pad + stepX*i + stepX/2;
-    const hN = t.newCases*scaleY, hD = t.doneCases*scaleY;
-    const x1 = cx - bw - gap/2, x2 = cx + gap/2;
-    bars += `<rect x="${x1}" y="${h-padB-hN}" width="${bw}" height="${hN}" rx="3" fill="#0F6656"><title>${t.date}: เข้าใหม่ ${t.newCases}</title></rect>`;
-    bars += `<rect x="${x2}" y="${h-padB-hD}" width="${bw}" height="${hD}" rx="3" fill="#C0392B"><title>${t.date}: ปิด ${t.doneCases}</title></rect>`;
+    const hN = t.newCases*scaleY, hC = (t.claimedCases||0)*scaleY, hD = t.doneCases*scaleY;
+    // 3 แท่งเรียงกลางคอลัมน์: เข้า(เขียว) รับ(ทอง) ปิด(แดง)
+    const totalW = bw*3 + gap*2;
+    const x0 = cx - totalW/2;
+    bars += `<rect x="${x0}" y="${h-padB-hN}" width="${bw}" height="${hN}" rx="3" fill="#0F6656"><title>${t.date}: เข้าใหม่ ${t.newCases}</title></rect>`;
+    bars += `<rect x="${x0+bw+gap}" y="${h-padB-hC}" width="${bw}" height="${hC}" rx="3" fill="#B8860B"><title>${t.date}: รับเคส ${t.claimedCases||0}</title></rect>`;
+    bars += `<rect x="${x0+bw*2+gap*2}" y="${h-padB-hD}" width="${bw}" height="${hD}" rx="3" fill="#C0392B"><title>${t.date}: ปิด ${t.doneCases}</title></rect>`;
     labels += `<text x="${cx}" y="${h-padB+18}" text-anchor="middle" font-size="11.5" fill="#6B7482">${t.date}</text>`;
   });
 
