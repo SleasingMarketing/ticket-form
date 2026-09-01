@@ -261,7 +261,7 @@ function bindUploadBox(boxId, inputId, opts){
     document.getElementById(inputId).addEventListener('change', handler, {once:true});
   }, {once:true});
 }
-bindUploadBox('box-lock','file-lock', {maxW:720, quality:0.6});   // หน้าล็อก ย่อแรงกว่า ประหยัดพื้นที่
+bindUploadBox('box-lock','file-lock', {maxW:720, quality:0.2});   // หน้าล็อก ย่อแรงกว่า ประหยัดพื้นที่
 bindUploadBox('box-slip','file-slip', {maxW:1000, quality:0.7});  // สลิป เก็บรายละเอียดยอดเงิน
 bindUploadBox('box-slip2','file-slip2', {maxW:1000, quality:0.7}); // สลิปเพิ่มเติม (ไม่บังคับ)
 
