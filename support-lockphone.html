@@ -213,6 +213,24 @@
   .taken-card p{font-size:14px;color:var(--ink-soft);margin:0 0 20px;line-height:1.5;}
   .taken-card button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
 
+  /* popup กำลังอัปเดตสถานะ */
+  .updating-overlay{
+    position:fixed;inset:0;background:rgba(26,35,51,.45);z-index:130;
+    display:none;align-items:center;justify-content:center;padding:24px;
+  }
+  .updating-overlay.show{display:flex;}
+  .updating-card{
+    background:#fff;border-radius:16px;padding:26px 34px;
+    display:flex;align-items:center;gap:16px;
+    box-shadow:0 12px 40px rgba(0,0,0,.2);
+  }
+  .updating-card .spinner{
+    width:26px;height:26px;flex-shrink:0;
+    border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:spin .6s linear infinite;
+  }
+  .updating-card .txt{font-size:15px;font-weight:700;color:var(--ink);}
+
   /* popup รายละเอียดลูกค้า */
   .detail-overlay{position:fixed;inset:0;background:rgba(26,35,51,.55);z-index:120;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
   .detail-overlay.show{display:flex;}
@@ -295,6 +313,13 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="updating-overlay" id="updatingOverlay">
+  <div class="updating-card">
+    <div class="spinner"></div>
+    <div class="txt">กำลังอัปเดตสถานะ...</div>
+  </div>
+</div>
+
 <script>
 // ===== ตั้งค่าตรงนี้ =====
 // URL ของ backend แอดมิน (Code-admin.gs) — คนละตัวกับ ticket-form ของลูกค้า
@@ -321,6 +346,11 @@ function showToast(msg){
   t.classList.add('show');
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// popup กำลังอัปเดตสถานะ — บังหน้าจอ + กันกดซ้ำระหว่างรอ backend
+function showUpdating(show){
+  document.getElementById('updatingOverlay').classList.toggle('show', show);
 }
 
 function escapeHtml(s){
@@ -523,6 +553,7 @@ async function setStatus(ticketCode, status){
 
   const isClaim = (status === 'รอดำเนินการ' && !t.ownerUser);
   busy.add(ticketCode);
+  showUpdating(true); // ขึ้น popup "กำลังอัปเดตสถานะ..." ทันทีที่กด กันกดซ้ำ + ให้ feedback ชัด
   stopPolling(); // หยุด polling ระหว่างอัปเดต กันดึงค่าเก่ามาทับ
 
   const row = document.querySelector(`.row[data-code="${cssEscape(ticketCode)}"]`);
@@ -566,6 +597,7 @@ async function setStatus(ticketCode, status){
     showToast('เชื่อมต่อไม่สำเร็จ');
   }finally{
     busy.delete(ticketCode);
+    showUpdating(false); // ปิด popup เมื่ออัปเดต + sync เสร็จ (ทั้งกรณีสำเร็จและล้มเหลว)
     startPolling(); // เปิด polling กลับหลัง sync เสร็จ
     if(row){
       const b = row.querySelector('.btn-wait');
