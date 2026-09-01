@@ -287,7 +287,7 @@
       <span class="icon">🔍</span>
     </div>
     <button class="btn-refresh" id="refreshBtn">รีเฟรช</button>
-    <a href="./insight.html" class="btn-refresh" style="text-decoration:none;">วิเคราะห์</a>
+    <a href="./insight.html" target="_blank" rel="noopener" class="btn-refresh" style="text-decoration:none;">วิเคราะห์</a>
   </div>
 </header>
 
@@ -734,6 +734,8 @@ async function tryLogin(){
     const res = await api({ action:'login', username: val });
     if(res.ok){
       me = { username: res.username, displayName: res.displayName, avatarUrl: res.avatarUrl || '' };
+      // เก็บ login ไว้ใน sessionStorage — สลับแท็บ/refresh ไม่ต้อง login ซ้ำ (ปิดเบราว์เซอร์ถึงล้าง)
+      try{ sessionStorage.setItem('sl_me', JSON.stringify(me)); }catch(e){}
       enterApp();
     } else {
       err.textContent = res.message || 'ไม่พบชื่อผู้ใช้นี้';
@@ -748,7 +750,17 @@ async function tryLogin(){
 document.getElementById('loginBtn').addEventListener('click', tryLogin);
 document.getElementById('userInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryLogin(); });
 
-document.getElementById('userInput').focus();
+// เช็ค login ที่จำไว้ใน session — ถ้ามี เข้าเลยไม่ต้อง login ซ้ำ
+(function initAuth(){
+  try{
+    const saved = sessionStorage.getItem('sl_me');
+    if(saved){
+      me = JSON.parse(saved);
+      if(me && me.username){ enterApp(); return; }
+    }
+  }catch(e){}
+  document.getElementById('userInput').focus();
+})();
 </script>
 </body>
 </html>
