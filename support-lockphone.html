@@ -521,8 +521,9 @@ async function setStatus(ticketCode, status){
   const t = findTicket(ticketCode);
   if(!t) return;
 
-  const isClaim = (status === 'รอดำเนินการ' && !t.ownerUser); // การกดที่แย่งเจ้าของ (ปุ่มรอดำเนินการ)
+  const isClaim = (status === 'รอดำเนินการ' && !t.ownerUser);
   busy.add(ticketCode);
+  stopPolling(); // หยุด polling ระหว่างอัปเดต กันดึงค่าเก่ามาทับ
 
   const row = document.querySelector(`.row[data-code="${cssEscape(ticketCode)}"]`);
 
@@ -557,16 +558,15 @@ async function setStatus(ticketCode, status){
       if(res.ownerUser !== undefined){ t.ownerUser = res.ownerUser; t.ownerName = res.ownerName; t.ownerAvatar = res.ownerAvatar; }
       if(row) updateRow(row, t);
     }
-    // sync เงียบๆ เบื้องหลัง (รอให้เสร็จก่อนปล่อย busy กันค่าเก่าทับ)
+    // sync เงียบๆ (รอเสร็จ) — ตอนนี้ server เขียนเสร็จแล้วเพราะ setStatus return มาแล้ว
     await loadSilent();
   }catch(err){
     Object.assign(t, prev);
     if(row) updateRow(row, t);
     showToast('เชื่อมต่อไม่สำเร็จ');
   }finally{
-    // หน่วงเล็กน้อยก่อนปล่อย busy — เผื่อ Apps Script เขียนชีตยังไม่เสร็จ
-    // (ถ้าปล่อยทันที polling รอบถัดไปอาจดึงค่าเก่ามาทับ ทำให้สถานะกระพริบ)
-    setTimeout(() => { busy.delete(ticketCode); }, 2500);
+    busy.delete(ticketCode);
+    startPolling(); // เปิด polling กลับหลัง sync เสร็จ
     if(row){
       const b = row.querySelector('.btn-wait');
       if(b){ b.classList.remove('btn-loading'); b.disabled = false; }
