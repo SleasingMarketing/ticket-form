@@ -256,7 +256,8 @@ async function tryLogin(){
   try{
     const res = await api({ action:'login', username: val });
     if(res.ok){
-      me = res;
+      me = { username: res.username, displayName: res.displayName, avatarUrl: res.avatarUrl || '' };
+      try{ sessionStorage.setItem('sl_me', JSON.stringify(me)); }catch(e){}
       document.getElementById('gate').classList.add('hidden');
       loadInsight();
     } else {
@@ -270,7 +271,22 @@ async function tryLogin(){
 }
 document.getElementById('loginBtn').addEventListener('click', tryLogin);
 document.getElementById('userInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryLogin(); });
-document.getElementById('userInput').focus();
+
+// เช็ค login ที่จำไว้ใน session (key เดียวกับหน้าคิว) — เปิดจากปุ่มวิเคราะห์แล้วเข้าเลย
+(function initAuth(){
+  try{
+    const saved = sessionStorage.getItem('sl_me');
+    if(saved){
+      me = JSON.parse(saved);
+      if(me && me.username){
+        document.getElementById('gate').classList.add('hidden');
+        loadInsight();
+        return;
+      }
+    }
+  }catch(e){}
+  document.getElementById('userInput').focus();
+})();
 </script>
 </body>
 </html>
