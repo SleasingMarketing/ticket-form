@@ -18,12 +18,12 @@
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh;padding:20px 14px 40px;}
-  .wrap{max-width:600px;margin:0 auto;}
+  .wrap{max-width:480px;margin:0 auto;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 18px;}
   .top-banner{display:block;margin:-22px -18px 18px;border-radius:14px 14px 0 0;overflow:hidden;}
   .top-banner img{width:100%;height:auto;display:block;}
   .top-banner:empty,.top-banner img[src=""]{display:none;}
-  h1{font-size:19px;margin:0 0 4px;}
+  h1{font-size:26px;margin:0 0 4px;}
   .desc{font-size:13px;color:var(--ink-soft);margin:0 0 20px;line-height:1.5;}
   label{display:block;font-size:13px;font-weight:600;margin:16px 0 6px;}
   input[type=text],input[type=tel]{
@@ -147,6 +147,12 @@
       </div>
       <div class="err" id="err-slip">กรุณาแนบรูปสลิปชำระเงิน</div>
 
+      <label>อัปโหลดรูปสลิปเพิ่มเติม <span style="font-weight:400;color:var(--ink-soft)">(ถ้ามี)</span></label>
+      <div class="upload-box" id="box-slip2">
+        <span class="hint">แตะเพื่อเลือกรูป</span>
+        <input type="file" accept="image/*" id="file-slip2">
+      </div>
+
       <button class="submit" id="submitBtn">ส่งเรื่องและรับคิว</button>
     </div>
   </div>
@@ -188,7 +194,7 @@
 
 <script>
 // ===== ตั้งค่าตรงนี้ =====
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgobwjjz751jjq9KGNExNlD7TqE5SZqM0mqOSaG0JUs1OkBHs7rXv9WldV_2OwKYmi/exec"; // ลิงก์จาก Deploy > Web app
+const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // ลิงก์จาก Deploy > Web app
 // =========================
 
 function toggle(id, show){ document.getElementById(id).classList.toggle('hidden', !show); }
@@ -257,6 +263,7 @@ function bindUploadBox(boxId, inputId, opts){
 }
 bindUploadBox('box-lock','file-lock', {maxW:720, quality:0.6});   // หน้าล็อก ย่อแรงกว่า ประหยัดพื้นที่
 bindUploadBox('box-slip','file-slip', {maxW:1000, quality:0.7});  // สลิป เก็บรายละเอียดยอดเงิน
+bindUploadBox('box-slip2','file-slip2', {maxW:1000, quality:0.7}); // สลิปเพิ่มเติม (ไม่บังคับ)
 
 function validate(){
   let ok = true;
@@ -359,7 +366,8 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     idcard: document.getElementById('idcard').value.trim(),
     contractno: document.getElementById('contractno').value.trim(),
     lockImage: document.getElementById('box-lock').dataset.image,
-    slipImage: document.getElementById('box-slip').dataset.image
+    slipImage: document.getElementById('box-slip').dataset.image,
+    slipImage2: document.getElementById('box-slip2').dataset.image || ''
   };
 
   try{
