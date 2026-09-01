@@ -557,14 +557,16 @@ async function setStatus(ticketCode, status){
       if(res.ownerUser !== undefined){ t.ownerUser = res.ownerUser; t.ownerName = res.ownerName; t.ownerAvatar = res.ownerAvatar; }
       if(row) updateRow(row, t);
     }
-    // sync เงียบๆ เบื้องหลัง ไม่บล็อก UI
-    loadSilent();
+    // sync เงียบๆ เบื้องหลัง (รอให้เสร็จก่อนปล่อย busy กันค่าเก่าทับ)
+    await loadSilent();
   }catch(err){
     Object.assign(t, prev);
     if(row) updateRow(row, t);
     showToast('เชื่อมต่อไม่สำเร็จ');
   }finally{
-    busy.delete(ticketCode);
+    // หน่วงเล็กน้อยก่อนปล่อย busy — เผื่อ Apps Script เขียนชีตยังไม่เสร็จ
+    // (ถ้าปล่อยทันที polling รอบถัดไปอาจดึงค่าเก่ามาทับ ทำให้สถานะกระพริบ)
+    setTimeout(() => { busy.delete(ticketCode); }, 2500);
     if(row){
       const b = row.querySelector('.btn-wait');
       if(b){ b.classList.remove('btn-loading'); b.disabled = false; }
@@ -664,10 +666,23 @@ function showTakenPopup(ownerName){
 }
 
 // โหลดลิสต์แบบเงียบ (ไม่โชว์ error UI) ใช้ sync หลัง optimistic
+// รวมข้อมูลจาก server แต่คงค่าเคสที่กำลัง busy (เพิ่งกด รอ backend ยืนยัน) ไว้
+// กันสถานะกระพริบจาก polling ที่ดึงค่าเก่ามาทับ optimistic
+function mergeTickets(serverTickets){
+  if(busy.size === 0){ tickets = serverTickets; return; }
+  const byCode = {};
+  tickets.forEach(t => { byCode[t.ticketCode] = t; });
+  tickets = serverTickets.map(st => {
+    // เคสที่กำลัง busy -> คงค่าที่หน้าจอถืออยู่ (optimistic) ไม่เอา server มาทับ
+    if(busy.has(st.ticketCode) && byCode[st.ticketCode]) return byCode[st.ticketCode];
+    return st;
+  });
+}
+
 async function loadSilent(){
   try{
     const res = await api({ action:'list' });
-    if(res.ok){ tickets = res.tickets; setLive(true); render(); }
+    if(res.ok){ mergeTickets(res.tickets); setLive(true); render(); }
   }catch(err){ /* เงียบ */ }
 }
 
@@ -675,7 +690,7 @@ async function load(){
   try{
     const res = await api({ action:'list' });
     if(res.ok){
-      tickets = res.tickets;
+      mergeTickets(res.tickets);
       setLive(true);
       render();
     }
