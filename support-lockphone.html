@@ -127,7 +127,7 @@
   /* สี = highlight ปุ่ม action ถัดไปที่ควรกด (ไม่ใช่สถานะปัจจุบัน) */
   /* งานใหม่ -> ควรกด "รอดำเนินการ" (เขียว) */
   .row.new .btn-wait{background:var(--accent);color:#fff;border-color:var(--accent);}
-  /* กำลังทำ -> ควรกด "อยู่ระหว่างดำเนินการ" (เขียว) หรือ "เสร็จสิ้น" (แดง) */
+  /* รอดำเนินการ -> ควรกด "อยู่ระหว่างดำเนินการ" (เขียว) หรือ "เสร็จสิ้น" (แดง) */
   .row.doing .btn-doing{background:var(--accent);color:#fff;border-color:var(--accent);}
   .row.doing .btn-done{background:var(--danger);color:#fff;border-color:var(--danger);}
   .row.doing .btn-done:hover{background:var(--danger-deep);}
@@ -272,7 +272,7 @@
     <select class="filter-sel" id="filterSel">
       <option value="all">สถานะทั้งหมด</option>
       <option value="งานใหม่">งานใหม่</option>
-      <option value="กำลังทำ">กำลังทำ</option>
+      <option value="รอดำเนินการ">รอดำเนินการ</option>
       <option value="รอข้อมูลเพิ่ม">รอข้อมูลเพิ่ม</option>
       <option value="เสร็จแล้ว">เสร็จสิ้น</option>
     </select>
@@ -284,7 +284,7 @@
       <span class="icon">🔍</span>
     </div>
     <button class="btn-refresh" id="refreshBtn">รีเฟรช</button>
-    <button class="btn-logout" id="logoutBtn">ออก</button>
+    <a href="./insight.html" class="btn-logout" style="text-decoration:none;">วิเคราะห์</a>
   </div>
 </header>
 
@@ -441,14 +441,14 @@ function buildRow(t){
 }
 
 function rowStatusClass(status){
-  if(status === 'กำลังทำ') return ' doing';
+  if(status === 'รอดำเนินการ') return ' doing';
   if(status === 'รอข้อมูลเพิ่ม') return ' waitinfo';
   if(status === 'เสร็จแล้ว') return ' done';
   return ' new'; // งานใหม่
 }
 
 // 3 ปุ่ม -> map สถานะ:
-//   "รอดำเนินการ" = กำลังทำ (รับเจ้าของ)
+//   "รอดำเนินการ" = สถานะรอดำเนินการ (รับเจ้าของ)
 //   "อยู่ระหว่างดำเนินการ" = รอข้อมูลเพิ่ม
 //   "เสร็จสิ้น" = เสร็จแล้ว
 // เคสที่มีเจ้าของเป็นคนอื่น -> ปุ่ม disable
@@ -465,7 +465,7 @@ function bindRowActions(row, t){
   const bw = row.querySelector('.btn-wait');
   const bd = row.querySelector('.btn-doing');
   const dn = row.querySelector('.btn-done');
-  if(bw) bw.addEventListener('click', () => setStatus(t.ticketCode, 'กำลังทำ'));
+  if(bw) bw.addEventListener('click', () => setStatus(t.ticketCode, 'รอดำเนินการ'));
   if(bd) bd.addEventListener('click', () => setStatus(t.ticketCode, 'รอข้อมูลเพิ่ม'));
   if(dn) dn.addEventListener('click', () => setStatus(t.ticketCode, 'เสร็จแล้ว'));
 }
@@ -518,7 +518,7 @@ async function setStatus(ticketCode, status){
   const t = findTicket(ticketCode);
   if(!t) return;
 
-  const isClaim = (status === 'กำลังทำ' && !t.ownerUser); // การกดที่แย่งเจ้าของ (ปุ่มรอดำเนินการ)
+  const isClaim = (status === 'รอดำเนินการ' && !t.ownerUser); // การกดที่แย่งเจ้าของ (ปุ่มรอดำเนินการ)
   busy.add(ticketCode);
 
   const row = document.querySelector(`.row[data-code="${cssEscape(ticketCode)}"]`);
@@ -540,7 +540,7 @@ async function setStatus(ticketCode, status){
 
     if(res.taken){
       // ถูกคนอื่นแย่งไปแล้ว -> rollback + popup
-      t.status = 'กำลังทำ';
+      t.status = 'รอดำเนินการ';
       t.ownerUser = res.ownerUser; t.ownerName = res.ownerName; t.ownerAvatar = res.ownerAvatar;
       if(row) updateRow(row, t);
       showTakenPopup(res.ownerName || 'แอดมินคนอื่น');
@@ -743,15 +743,6 @@ async function tryLogin(){
 
 document.getElementById('loginBtn').addEventListener('click', tryLogin);
 document.getElementById('userInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryLogin(); });
-
-document.getElementById('logoutBtn').addEventListener('click', () => {
-  stopPolling();
-  me = null;
-  document.getElementById('userInput').value = '';
-  document.getElementById('loginErr').textContent = '';
-  document.getElementById('gate').classList.remove('hidden');
-  document.getElementById('userInput').focus();
-});
 
 document.getElementById('userInput').focus();
 </script>
