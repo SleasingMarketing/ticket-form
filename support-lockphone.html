@@ -264,6 +264,9 @@
   .copy-btn:hover{border-color:var(--accent);color:var(--accent);}
   .copy-btn:active{transform:scale(.9);}
   .copy-btn.copied{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  /* แถวชื่อ LINE ใน popup — โชว์ค่าเป็นข้อความปกติ (ไม่ tabular-nums เพราะเป็นชื่อ ไม่ใช่ตัวเลข) */
+  .d-row .dv.line-name{font-variant-numeric:normal;text-align:right;max-width:60%;word-break:break-word;}
 </style>
 </head>
 <body>
@@ -642,6 +645,7 @@ function showDetailPopup(ticketCode){
         <button class="detail-close" id="dClose">✕</button></div>
       <div class="detail-body">
         <div class="d-name"><span id="dName"></span><button class="copy-btn" data-copy="dName" title="คัดลอกชื่อ">⧉</button></div>
+        <div class="d-row" id="dLineRow"><span class="dk">ชื่อ LINE</span><span class="dv-wrap"><span class="dv line-name" id="dLine"></span><button class="copy-btn" data-copy="dLine" title="คัดลอกชื่อ LINE">⧉</button></span></div>
         <div class="d-row"><span class="dk">เลขบัตรประชาชน</span><span class="dv-wrap"><span class="dv" id="dId"></span><button class="copy-btn" data-copy="dId" title="คัดลอกเลขบัตร">⧉</button></span></div>
         <div class="d-row" id="dContractRow"><span class="dk">เลขที่สัญญา</span><span class="dv-wrap"><span class="dv" id="dContract"></span><button class="copy-btn" data-copy="dContract" title="คัดลอกเลขที่สัญญา">⧉</button></span></div>
         <div class="d-images" id="dImages"></div>
@@ -661,6 +665,16 @@ function showDetailPopup(ticketCode){
   el.querySelector('#dCode').textContent = t.ticketCode;
   el.querySelector('#dName').textContent = t.fullname || '-';
   el.querySelector('#dId').textContent = t.idcard || '-';
+
+  // แถวชื่อ LINE — มีค่าค่อยโชว์ (เคสเก่าก่อนมี LIFF จะไม่มีค่า -> ซ่อนแถว)
+  const lineRow = el.querySelector('#dLineRow');
+  if(t.lineDisplayName){
+    el.querySelector('#dLine').textContent = t.lineDisplayName;
+    lineRow.style.display = '';
+  } else {
+    lineRow.style.display = 'none';
+  }
+
   const cRow = el.querySelector('#dContractRow');
   if(t.contractno){ el.querySelector('#dContract').textContent = t.contractno; cRow.style.display = ''; }
   else cRow.style.display = 'none';
