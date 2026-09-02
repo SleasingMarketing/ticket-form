@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>แจ้งปัญหา - ระบบคิว</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root{
     --bg:#F5F6F8;
@@ -45,6 +46,18 @@
     background:var(--accent);color:#fff;font-size:15.5px;font-weight:700;cursor:pointer;
   }
   button.submit:disabled{opacity:.55;cursor:default;}
+
+  /* แถบแสดงชื่อ LINE ของลูกค้า */
+  .line-user-bar{
+    display:none;align-items:center;gap:10px;margin:0 0 4px;padding:10px 12px;
+    background:#EAF4F1;border:1px solid #CFE6DF;border-radius:10px;
+  }
+  .line-user-bar.show{display:flex;}
+  .line-user-bar img{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#CFE6DF;}
+  .line-user-bar .txt{font-size:13px;line-height:1.4;min-width:0;}
+  .line-user-bar .txt small{display:block;color:var(--ink-soft);font-size:11.5px;}
+  .line-user-bar .txt b{color:var(--accent);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+
   .stub{
     background:var(--card);border-radius:14px;padding:0;overflow:hidden;text-align:center;
     box-shadow:0 6px 24px rgba(15,102,86,.12);
@@ -108,6 +121,20 @@
     width:100%;padding:13px;border:none;border-radius:10px;
     background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;
   }
+
+  /* หน้าจอโหลด LINE / กันเปิดนอก LINE */
+  .liff-gate{
+    position:fixed;inset:0;background:var(--bg);z-index:100;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:32px 24px;text-align:center;
+  }
+  .liff-gate .spinner{
+    width:38px;height:38px;border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:liffspin .8s linear infinite;margin-bottom:16px;
+  }
+  @keyframes liffspin{to{transform:rotate(360deg);}}
+  .liff-gate .msg{font-size:15px;color:var(--ink-soft);line-height:1.6;max-width:300px;}
+  .liff-gate .msg b{color:var(--ink);display:block;font-size:17px;margin-bottom:6px;}
 </style>
 </head>
 <body>
@@ -120,6 +147,14 @@
       </a>
       <h1>แบบฟอร์มแจ้งปัญหา</h1>
       <p class="desc">กรุณากรอกข้อมูลให้ครบถ้วน เจ้าหน้าที่จะติดต่อกลับตามลำดับคิวที่ลงทะเบียน</p>
+
+      <div class="line-user-bar" id="lineUserBar">
+        <img id="lineUserPic" alt="" src="">
+        <div class="txt">
+          <small>เข้าสู่ระบบในนาม</small>
+          <b id="lineUserName">-</b>
+        </div>
+      </div>
 
       <label for="fullname">ชื่อ - นามสกุล</label>
       <input type="text" id="fullname" placeholder="ชื่อ-นามสกุล">
@@ -192,12 +227,66 @@
 
 </div>
 
+<!-- หน้าจอโหลด/กันเปิดนอก LINE (ซ่อนเมื่อ LIFF พร้อม) -->
+<div class="liff-gate" id="liffGate">
+  <div class="spinner" id="liffSpinner"></div>
+  <div class="msg" id="liffMsg">กำลังเชื่อมต่อ LINE...</div>
+</div>
+
 <script>
 // ===== ตั้งค่าตรงนี้ =====
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgobwjjz751jjq9KGNExNlD7TqE5SZqM0mqOSaG0JUs1OkBHs7rXv9WldV_2OwKYmi/exec"; // ลิงก์จาก Deploy > Web app
+const LIFF_ID = "2011380685-plhcakAu"; // LIFF ID จาก LINE Developers Console
 // =========================
 
+// เก็บข้อมูล LINE ของลูกค้าไว้แนบตอนส่งฟอร์ม
+let lineProfile = { userId: '', displayName: '', pictureUrl: '' };
+
 function toggle(id, show){ document.getElementById(id).classList.toggle('hidden', !show); }
+
+// ===== เริ่มต้น LIFF: บังคับเปิดผ่าน LINE + ดึงชื่อลูกค้า =====
+async function initLiff(){
+  try{
+    await liff.init({ liffId: LIFF_ID });
+  }catch(err){
+    // init ไม่สำเร็จ (LIFF ID ผิด/เน็ตมีปัญหา)
+    showGateError('เชื่อมต่อ LINE ไม่สำเร็จ', 'กรุณาปิดหน้านี้แล้วเปิดใหม่อีกครั้งผ่านเมนูใน LINE');
+    return;
+  }
+
+  // บังคับให้เปิดผ่านแอป LINE เท่านั้น
+  if(!liff.isLoggedIn()){
+    liff.login(); // เด้งไป login แล้ววนกลับมาที่หน้านี้
+    return;
+  }
+
+  try{
+    const profile = await liff.getProfile();
+    lineProfile.userId = profile.userId || '';
+    lineProfile.displayName = profile.displayName || '';
+    lineProfile.pictureUrl = profile.pictureUrl || '';
+
+    // แสดงชื่อ LINE บนฟอร์ม
+    const bar = document.getElementById('lineUserBar');
+    document.getElementById('lineUserName').textContent = lineProfile.displayName || 'ผู้ใช้ LINE';
+    if(lineProfile.pictureUrl){
+      document.getElementById('lineUserPic').src = lineProfile.pictureUrl;
+    }
+    bar.classList.add('show');
+
+    // ทุกอย่างพร้อม -> ซ่อนหน้าโหลด
+    document.getElementById('liffGate').style.display = 'none';
+  }catch(err){
+    showGateError('ดึงข้อมูล LINE ไม่สำเร็จ', 'กรุณาปิดหน้านี้แล้วเปิดใหม่อีกครั้งผ่านเมนูใน LINE');
+  }
+}
+
+function showGateError(title, detail){
+  document.getElementById('liffSpinner').style.display = 'none';
+  document.getElementById('liffMsg').innerHTML = `<b>${title}</b>${detail}`;
+}
+
+initLiff();
 
 // โหลดแบนเนอร์หัวฟอร์มจากช่อง P2 ของชีต (cache ไว้ เปิดซ้ำเร็วขึ้น)
 function showBanner(url){
@@ -367,7 +456,9 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     contractno: document.getElementById('contractno').value.trim(),
     lockImage: document.getElementById('box-lock').dataset.image,
     slipImage: document.getElementById('box-slip').dataset.image,
-    slipImage2: document.getElementById('box-slip2').dataset.image || ''
+    slipImage2: document.getElementById('box-slip2').dataset.image || '',
+    lineUserId: lineProfile.userId,
+    lineDisplayName: lineProfile.displayName
   };
 
   try{
