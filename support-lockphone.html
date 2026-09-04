@@ -162,6 +162,15 @@
   }
   .empty .big{font-size:19px;font-weight:700;color:var(--ink);margin-bottom:8px;}
 
+  .load-more{
+    align-self:center;margin:8px auto 20px;padding:13px 32px;
+    border:1.5px solid var(--accent);border-radius:10px;
+    background:var(--card);color:var(--accent);font-size:14.5px;font-weight:700;
+    cursor:pointer;font-family:inherit;transition:all .16s ease;
+  }
+  .load-more:hover{background:var(--accent);color:#fff;}
+  .load-more:disabled{opacity:.55;cursor:default;}
+
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--ink);color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;
@@ -264,9 +273,6 @@
   .copy-btn:hover{border-color:var(--accent);color:var(--accent);}
   .copy-btn:active{transform:scale(.9);}
   .copy-btn.copied{background:var(--accent);color:#fff;border-color:var(--accent);}
-
-  /* แถวชื่อ LINE ใน popup — โชว์ค่าเป็นข้อความปกติ (ไม่ tabular-nums เพราะเป็นชื่อ ไม่ใช่ตัวเลข) */
-  .d-row .dv.line-name{font-variant-numeric:normal;text-align:right;max-width:60%;word-break:break-word;}
 </style>
 </head>
 <body>
@@ -295,7 +301,7 @@
     <div class="live" id="live"><span class="dot"></span><span id="liveLabel">อัปเดตอัตโนมัติ</span></div>
     <select class="filter-sel" id="filterSel">
       <option value="all">สถานะทั้งหมด</option>
-      <option value="งานใหม่">งานใหม่</option>
+      <option value="งานใหม่" selected>งานใหม่</option>
       <option value="รอดำเนินการ">รอดำเนินการ</option>
       <option value="รอข้อมูลเพิ่ม">รอข้อมูลเพิ่ม</option>
       <option value="เสร็จแล้ว">เสร็จสิ้น</option>
@@ -331,12 +337,21 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvjmsN19ZHE5qo
 
 const API_URL = APPS_SCRIPT_URL;
 const POLL_MS = 5000;
+const PAGE_SIZE = 50;   // โหลดคิวทีละ 50 ใบ (เก่าสุดก่อน) กันโหลดพันใบรวดตอนเช้า
 
 let tickets = [];
 let me = null;
 let allAdmins = [];   // รายชื่อแอดมินทั้งหมด (สำหรับ filter)
 let busy = new Set();
 let pollTimer = null;
+
+// ===== สถานะ pagination + poll แบบเบา =====
+let totalActive = 0;    // จำนวนคิว active ทั้งหมดใน backend (ไม่ใช่แค่ที่โหลดมา)
+let loadedOffset = 0;   // โหลดมาแล้วกี่ใบ (ใช้ขอชุดถัดไป)
+let hasMore = false;    // ยังมีคิวให้โหลดเพิ่มไหม
+let loadingMore = false; // กันกดโหลดเพิ่มซ้ำ
+let pollSince = 0;      // high-water mark (ms) — poll changes เอาเฉพาะที่เปลี่ยนหลังเวลานี้
+let firstLoaded = false; // โหลดชุดแรกเสร็จหรือยัง
 
 function api(params){
   const qs = new URLSearchParams(params).toString();
@@ -402,7 +417,13 @@ function render(){
   const list = document.getElementById('list');
   const items = visibleTickets();
 
-  document.getElementById('countPill').textContent = `${items.length} รายการ`;
+  // แสดงจำนวนที่ตรงเงื่อนไข + จำนวน active ทั้งหมดใน backend (ถ้ายังโหลดไม่ครบ)
+  const loadedActive = tickets.length;
+  if(totalActive > loadedActive){
+    document.getElementById('countPill').textContent = `${items.length} รายการ (โหลด ${loadedActive}/${totalActive})`;
+  } else {
+    document.getElementById('countPill').textContent = `${items.length} รายการ`;
+  }
   refreshOwnerOptions();
 
   if(items.length === 0){
@@ -435,6 +456,30 @@ function render(){
       updateRow(rowEl, t);
     }
   });
+
+  updateLoadMore();
+}
+
+// ปุ่ม "โหลดเพิ่ม" ท้ายลิสต์ — โผล่เฉพาะตอนยังมีคิวค้างที่ยังไม่โหลด
+function updateLoadMore(){
+  const list = document.getElementById('list');
+  let btn = document.getElementById('loadMoreBtn');
+
+  if(!hasMore){
+    if(btn) btn.remove();
+    return;
+  }
+  if(!btn){
+    btn = document.createElement('button');
+    btn.id = 'loadMoreBtn';
+    btn.className = 'load-more';
+    btn.addEventListener('click', loadMore);
+  }
+  const remaining = Math.max(0, totalActive - tickets.length);
+  btn.textContent = loadingMore ? 'กำลังโหลด...' : `โหลดเพิ่ม (เหลืออีก ${remaining} คิว)`;
+  btn.disabled = loadingMore;
+  // ให้อยู่ท้ายสุดเสมอ
+  list.appendChild(btn);
 }
 
 function cssEscape(s){ return String(s).replace(/"/g, '\\"'); }
@@ -592,8 +637,8 @@ async function setStatus(ticketCode, status){
       if(res.ownerUser !== undefined){ t.ownerUser = res.ownerUser; t.ownerName = res.ownerName; t.ownerAvatar = res.ownerAvatar; }
       if(row) updateRow(row, t);
     }
-    // sync เงียบๆ (รอเสร็จ) — ตอนนี้ server เขียนเสร็จแล้วเพราะ setStatus return มาแล้ว
-    await loadSilent();
+    // ไม่ต้อง sync ทั้งลิสต์ — ใบนี้อัปเดตจาก response ตรงแล้ว (แม่นกว่า)
+    // ใบอื่นที่คนอื่นแก้ รอบ pollChanges ปกติจับได้เอง
   }catch(err){
     Object.assign(t, prev);
     if(row) updateRow(row, t);
@@ -645,7 +690,6 @@ function showDetailPopup(ticketCode){
         <button class="detail-close" id="dClose">✕</button></div>
       <div class="detail-body">
         <div class="d-name"><span id="dName"></span><button class="copy-btn" data-copy="dName" title="คัดลอกชื่อ">⧉</button></div>
-        <div class="d-row" id="dLineRow"><span class="dk">ชื่อ LINE</span><span class="dv-wrap"><span class="dv line-name" id="dLine"></span><button class="copy-btn" data-copy="dLine" title="คัดลอกชื่อ LINE">⧉</button></span></div>
         <div class="d-row"><span class="dk">เลขบัตรประชาชน</span><span class="dv-wrap"><span class="dv" id="dId"></span><button class="copy-btn" data-copy="dId" title="คัดลอกเลขบัตร">⧉</button></span></div>
         <div class="d-row" id="dContractRow"><span class="dk">เลขที่สัญญา</span><span class="dv-wrap"><span class="dv" id="dContract"></span><button class="copy-btn" data-copy="dContract" title="คัดลอกเลขที่สัญญา">⧉</button></span></div>
         <div class="d-images" id="dImages"></div>
@@ -665,16 +709,6 @@ function showDetailPopup(ticketCode){
   el.querySelector('#dCode').textContent = t.ticketCode;
   el.querySelector('#dName').textContent = t.fullname || '-';
   el.querySelector('#dId').textContent = t.idcard || '-';
-
-  // แถวชื่อ LINE — มีค่าค่อยโชว์ (เคสเก่าก่อนมี LIFF จะไม่มีค่า -> ซ่อนแถว)
-  const lineRow = el.querySelector('#dLineRow');
-  if(t.lineDisplayName){
-    el.querySelector('#dLine').textContent = t.lineDisplayName;
-    lineRow.style.display = '';
-  } else {
-    lineRow.style.display = 'none';
-  }
-
   const cRow = el.querySelector('#dContractRow');
   if(t.contractno){ el.querySelector('#dContract').textContent = t.contractno; cRow.style.display = ''; }
   else cRow.style.display = 'none';
@@ -711,52 +745,124 @@ function showTakenPopup(ownerName){
   el.classList.add('show');
 }
 
-// โหลดลิสต์แบบเงียบ (ไม่โชว์ error UI) ใช้ sync หลัง optimistic
-// รวมข้อมูลจาก server แต่คงค่าเคสที่กำลัง busy (เพิ่งกด รอ backend ยืนยัน) ไว้
-// กันสถานะกระพริบจาก polling ที่ดึงค่าเก่ามาทับ optimistic
-function mergeTickets(serverTickets){
-  if(busy.size === 0){ tickets = serverTickets; return; }
-  const byCode = {};
-  tickets.forEach(t => { byCode[t.ticketCode] = t; });
-  tickets = serverTickets.map(st => {
-    // เคสที่กำลัง busy -> คงค่าที่หน้าจอถืออยู่ (optimistic) ไม่เอา server มาทับ
-    if(busy.has(st.ticketCode) && byCode[st.ticketCode]) return byCode[st.ticketCode];
-    return st;
-  });
+// อัปเดต high-water mark จาก ticket ที่เพิ่งได้มา (เอาค่า updatedAt สูงสุด)
+function bumpPollSince(list){
+  list.forEach(t => { if(t.updatedAt && t.updatedAt > pollSince) pollSince = t.updatedAt; });
 }
 
-async function loadSilent(){
-  try{
-    const res = await api({ action:'list' });
-    if(res.ok){ mergeTickets(res.tickets); setLive(true); render(); }
-  }catch(err){ /* เงียบ */ }
+// รวม/แทน ticket เข้า tickets ตาม ticketCode — คงค่าเคสที่กำลัง busy ไว้ (optimistic ไม่โดนทับ)
+function upsertTicket(st){
+  if(busy.has(st.ticketCode)) return; // กำลังกดอยู่ อย่าเอา server มาทับ
+  const idx = tickets.findIndex(t => t.ticketCode === st.ticketCode);
+  if(idx === -1) tickets.push(st);
+  else tickets[idx] = st;
 }
 
-async function load(){
+// ===== โหลดชุดแรก (ครั้งเดียวตอนเข้า) =====
+async function loadFirst(){
   try{
-    const res = await api({ action:'list' });
+    const res = await api({ action:'list', offset:0, limit:PAGE_SIZE });
     if(res.ok){
-      mergeTickets(res.tickets);
+      tickets = res.tickets;
+      totalActive = res.total;
+      loadedOffset = res.tickets.length;
+      hasMore = res.hasMore;
+      // ตั้ง high-water mark เริ่มต้นจาก serverNow — poll changes จะเอาเฉพาะที่เปลี่ยน "หลังจากนี้"
+      pollSince = res.serverNow || 0;
+      firstLoaded = true;
       setLive(true);
       render();
+      updateLoadMore();
     }
   }catch(err){
     setLive(false);
   }
 }
 
-function startPolling(){ stopPolling(); pollTimer = setInterval(load, POLL_MS); }
+// ===== โหลดชุดถัดไป (กดปุ่ม "โหลดเพิ่ม" หรือเลื่อนถึงท้าย) =====
+async function loadMore(){
+  if(loadingMore || !hasMore) return;
+  loadingMore = true;
+  updateLoadMore();
+  try{
+    const res = await api({ action:'list', offset:loadedOffset, limit:PAGE_SIZE });
+    if(res.ok){
+      res.tickets.forEach(upsertTicket);
+      totalActive = res.total;
+      loadedOffset += res.tickets.length;
+      hasMore = res.hasMore;
+      render();
+    }
+  }catch(err){ /* เงียบ ปล่อยให้กดใหม่ได้ */ }
+  finally{
+    loadingMore = false;
+    updateLoadMore();
+  }
+}
+
+// ===== poll แบบเบา: ดึงเฉพาะที่เปลี่ยนหลัง pollSince =====
+async function pollChanges(){
+  try{
+    const res = await api({ action:'changes', since: pollSince });
+    if(!res.ok){ return; }
+    setLive(true);
+
+    let touched = false;
+    // คิวที่หลุดจากจอแล้ว (เช่นเสร็จข้ามวัน) -> เอาออก
+    if(res.removed && res.removed.length){
+      const rm = new Set(res.removed);
+      const before = tickets.length;
+      tickets = tickets.filter(t => !rm.has(t.ticketCode) || busy.has(t.ticketCode));
+      if(tickets.length !== before) touched = true;
+    }
+    // คิวที่เปลี่ยน/ใหม่ -> upsert
+    if(res.changed && res.changed.length){
+      res.changed.forEach(st => {
+        // คิวใหม่ที่เพิ่งเข้ามา (ยังไม่เคยโหลด) นับเพิ่ม totalActive
+        if(!tickets.find(t => t.ticketCode === st.ticketCode)) totalActive++;
+        upsertTicket(st);
+      });
+      bumpPollSince(res.changed);
+      touched = true;
+    }
+    // เลื่อน high-water mark ด้วย serverNow เสมอ กันดึงซ้ำ (แม้รอบนี้ไม่มีอะไรเปลี่ยน)
+    if(res.serverNow && res.serverNow > pollSince) pollSince = res.serverNow;
+
+    if(touched){ render(); updateLoadMore(); }
+  }catch(err){
+    setLive(false);
+  }
+}
+
+// sync หลัง optimistic update — ใช้ changes เหมือนกัน (เบา) แทนโหลดทั้งลิสต์
+async function loadSilent(){
+  await pollChanges();
+}
+
+function startPolling(){ stopPolling(); pollTimer = setInterval(pollChanges, POLL_MS); }
 function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
 
 document.addEventListener('visibilitychange', () => {
   if(document.hidden) stopPolling();
-  else if(document.getElementById('gate').classList.contains('hidden')){ load(); startPolling(); }
+  else if(document.getElementById('gate').classList.contains('hidden')){ pollChanges(); startPolling(); }
 });
 
-document.getElementById('refreshBtn').addEventListener('click', load);
+// ปุ่มรีเฟรช = โหลดใหม่ทั้งหมดตั้งแต่ต้น (reset pagination)
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  tickets = []; loadedOffset = 0; totalActive = 0; hasMore = false; pollSince = 0;
+  document.getElementById('list').innerHTML = '';
+  loadFirst();
+});
 document.getElementById('filterSel').addEventListener('change', render);
 document.getElementById('ownerSel').addEventListener('change', render);
 document.getElementById('searchInput').addEventListener('input', render);
+
+// เลื่อนใกล้ท้ายหน้า -> โหลดชุดถัดไปอัตโนมัติ (เสริมปุ่มโหลดเพิ่ม)
+window.addEventListener('scroll', () => {
+  if(!hasMore || loadingMore) return;
+  const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 400;
+  if(nearBottom) loadMore();
+}, { passive:true });
 
 function applyMe(){
   document.getElementById('meName').textContent = me.displayName;
@@ -779,8 +885,8 @@ function enterApp(){
   applyMe();
   document.getElementById('gate').classList.add('hidden');
   loadAdmins();
-  load();
-  startPolling();
+  loadFirst();     // โหลดชุดแรก 50 ใบ (เก่าสุดก่อน)
+  startPolling();  // จากนั้น poll แบบเบา (เฉพาะที่เปลี่ยน)
 }
 
 async function tryLogin(){
